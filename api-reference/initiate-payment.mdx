@@ -317,6 +317,18 @@ $result = json_decode($response, true);
 }
 ```
 
+```json 200 Successful (No Auth Required)
+{
+  "success": true,
+  "message": "Transaction initiated",
+  "data": {
+    "reference": "TXN_hHcFFwL36fWhnhsg",
+    "status": "successful",
+    "payment_url": null
+  }
+}
+```
+
 ```json 200 Requires OTP
 {
   "success": true,
@@ -338,18 +350,6 @@ $result = json_decode($response, true);
     "reference": "ORD-12345",
     "status": "requires_action",
     "next_action": "pin",
-    "payment_url": null
-  }
-}
-```
-
-```json 200 Successful (No Auth Required)
-{
-  "success": true,
-  "message": "Transaction initiated",
-  "data": {
-    "reference": "TXN_hHcFFwL36fWhnhsg",
-    "status": "successful",
     "payment_url": null
   }
 }
@@ -415,6 +415,10 @@ After initiating a payment, check the `status` and `next_action` fields:
 2. The customer completes authentication (3D Secure, etc.)
 3. Customer is redirected back to your `callbackUrl`
 4. Use the [Verify Transaction](/api-reference/verify-transaction) endpoint to confirm the final status
+
+### If `status` is `successful`
+The transaction completed immediately without additional authentication.
+1. Use the [Verify Transaction](/api-reference/verify-transaction) endpoint to confirm the final status
 
 ### If `next_action` is `otp`
 1. Display an OTP input form to the customer
