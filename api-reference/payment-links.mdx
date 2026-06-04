@@ -1,0 +1,398 @@
+---
+title: 'Payment Links'
+description: 'Create and manage shareable payment links'
+---
+
+## Overview
+
+Payment Links allow you to create shareable URLs that customers can use to make payments. They're ideal for invoicing, donations, subscriptions, and any scenario where you need to collect payments without building a checkout page.
+
+## Create a Payment Link
+
+<Card title="POST /payment-links" icon="link">
+  Create a new payment link
+</Card>
+
+### Authentication
+
+```
+Authorization: Bearer sk_live_your_secret_key
+```
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Name of the payment link (e.g., "Invoice #1234", "Donation")
+</ParamField>
+
+<ParamField body="description" type="string">
+  Description shown on the payment page (max 1000 characters)
+</ParamField>
+
+<ParamField body="amount" type="number">
+  Fixed payment amount. If omitted, the customer can enter any amount.
+</ParamField>
+
+<ParamField body="currency" type="string" default="NGN">
+  Three-letter ISO currency code (e.g., "USD", "NGN", "GBP")
+</ParamField>
+
+<ParamField body="isAmountFixed" type="boolean">
+  Whether the amount is fixed or customer-configurable. Automatically set to `true` if `amount` is provided.
+</ParamField>
+
+<ParamField body="paymentType" type="string" default="one_time">
+  Payment type: `one_time` or `subscription`
+</ParamField>
+
+<ParamField body="usageType" type="string" default="multiple_use">
+  Usage type: `single_use` (deactivates after one payment) or `multiple_use`
+</ParamField>
+
+<ParamField body="redirectUrl" type="string">
+  URL to redirect the customer after successful payment
+</ParamField>
+
+<ParamField body="successMessage" type="string">
+  Custom message shown after successful payment (max 500 characters)
+</ParamField>
+
+<ParamField body="notificationEmails" type="string[]">
+  Array of email addresses to notify when a payment is made (max 10)
+</ParamField>
+
+<ParamField body="collectPhoneNumber" type="boolean" default="false">
+  Whether to collect the customer's phone number
+</ParamField>
+
+<ParamField body="customFields" type="object[]">
+  Custom fields to collect from the customer
+  <Expandable title="properties">
+    <ParamField body="fieldName" type="string" required>
+      Field label shown to customer
+    </ParamField>
+    <ParamField body="fieldType" type="string" required>
+      Field type: `text`, `email`, `phone`, `number`, `select`, `textarea`
+    </ParamField>
+    <ParamField body="required" type="boolean" default="false">
+      Whether the field is required
+    </ParamField>
+    <ParamField body="options" type="string[]">
+      Options for `select` field type
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="slug" type="string">
+  Custom URL slug. If not provided, one is generated from the name. Must be unique.
+</ParamField>
+
+<ParamField body="expiresAt" type="string">
+  ISO 8601 expiration date. After this date, the link can no longer accept payments.
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  Additional key-value pairs to attach to the payment link
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      Unique payment link ID
+    </ResponseField>
+    <ResponseField name="reference" type="string">
+      Payment link reference (e.g., `plk_abc123xyz789`)
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Payment link name
+    </ResponseField>
+    <ResponseField name="slug" type="string">
+      URL slug
+    </ResponseField>
+    <ResponseField name="paymentUrl" type="string">
+      Full payment URL to share with customers
+    </ResponseField>
+    <ResponseField name="amount" type="number">
+      Fixed amount (null if customer-configurable)
+    </ResponseField>
+    <ResponseField name="currency" type="string">
+      Currency code
+    </ResponseField>
+    <ResponseField name="isActive" type="boolean">
+      Whether the link is active
+    </ResponseField>
+    <ResponseField name="totalPayments" type="number">
+      Total payment attempts
+    </ResponseField>
+    <ResponseField name="successfulPayments" type="number">
+      Successful payments
+    </ResponseField>
+    <ResponseField name="totalAmountCollected" type="number">
+      Total amount collected
+    </ResponseField>
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "https://api.rollapay.com/payment-links" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Invoice #1234",
+    "description": "Payment for consulting services",
+    "amount": 5000,
+    "currency": "USD",
+    "redirectUrl": "https://yoursite.com/thank-you",
+    "successMessage": "Thank you for your payment!",
+    "notificationEmails": ["billing@yourcompany.com"],
+    "metadata": {
+      "invoiceId": "INV-1234"
+    }
+  }'
+```
+
+```javascript Node.js
+const response = await fetch('https://api.rollapay.com/payment-links', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer sk_live_your_secret_key',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    name: 'Invoice #1234',
+    description: 'Payment for consulting services',
+    amount: 5000,
+    currency: 'USD',
+    redirectUrl: 'https://yoursite.com/thank-you',
+    metadata: { invoiceId: 'INV-1234' },
+  }),
+});
+
+const data = await response.json();
+console.log(data.data.paymentUrl); // Share this URL
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.rollapay.com/payment-links',
+    headers={
+        'Authorization': 'Bearer sk_live_your_secret_key',
+        'Content-Type': 'application/json',
+    },
+    json={
+        'name': 'Invoice #1234',
+        'description': 'Payment for consulting services',
+        'amount': 5000,
+        'currency': 'USD',
+        'redirectUrl': 'https://yoursite.com/thank-you',
+        'metadata': {'invoiceId': 'INV-1234'},
+    }
+)
+
+data = response.json()
+print(data['data']['paymentUrl'])  # Share this URL
+```
+</RequestExample>
+
+<ResponseExample>
+```json 201 Created
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "reference": "plk_abc123xyz789",
+    "name": "Invoice #1234",
+    "description": "Payment for consulting services",
+    "slug": "invoice-1234-x7k9m2",
+    "paymentUrl": "https://payment.rollapay.com/pay/invoice-1234-x7k9m2",
+    "amount": 5000,
+    "currency": "USD",
+    "isAmountFixed": true,
+    "paymentType": "one_time",
+    "usageType": "multiple_use",
+    "isActive": true,
+    "redirectUrl": "https://yoursite.com/thank-you",
+    "successMessage": "Thank you for your payment!",
+    "notificationEmails": ["billing@yourcompany.com"],
+    "collectPhoneNumber": false,
+    "customFields": [],
+    "totalPayments": 0,
+    "successfulPayments": 0,
+    "totalAmountCollected": 0,
+    "metadata": { "invoiceId": "INV-1234" },
+    "mode": "live",
+    "expiresAt": null,
+    "isExpired": false,
+    "isCompleted": false,
+    "createdAt": "2026-06-01T12:00:00.000Z"
+  }
+}
+```
+</ResponseExample>
+
+---
+
+## List Payment Links
+
+<Card title="GET /payment-links" icon="list">
+  List all payment links for your organization
+</Card>
+
+### Query Parameters
+
+<ParamField query="page" type="number" default="1">
+  Page number
+</ParamField>
+
+<ParamField query="limit" type="number" default="20">
+  Results per page (max 100)
+</ParamField>
+
+<ParamField query="search" type="string">
+  Search by name or reference
+</ParamField>
+
+<ParamField query="isActive" type="boolean">
+  Filter by active status
+</ParamField>
+
+<ParamField query="sortBy" type="string" default="createdAt">
+  Sort by: `createdAt`, `name`, `successfulPayments`, `totalAmountCollected`
+</ParamField>
+
+<ParamField query="sortOrder" type="string" default="desc">
+  Sort order: `asc` or `desc`
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.rollapay.com/payment-links?limit=10&isActive=true" \
+  -H "Authorization: Bearer sk_live_your_secret_key"
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 Success
+{
+  "success": true,
+  "data": {
+    "paymentLinks": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "reference": "plk_abc123xyz789",
+        "name": "Invoice #1234",
+        "paymentUrl": "https://payment.rollapay.com/pay/invoice-1234-x7k9m2",
+        "amount": 5000,
+        "currency": "USD",
+        "isActive": true,
+        "successfulPayments": 3,
+        "totalAmountCollected": 15000,
+        "createdAt": "2026-06-01T12:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "total": 12,
+      "page": 1,
+      "limit": 10,
+      "totalPages": 2
+    }
+  }
+}
+```
+</ResponseExample>
+
+---
+
+## Get a Payment Link
+
+<Card title="GET /payment-links/:id" icon="magnifying-glass">
+  Get payment link details by ID
+</Card>
+
+<ParamField path="id" type="string" required>
+  The payment link ID
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.rollapay.com/payment-links/{id}" \
+  -H "Authorization: Bearer sk_live_your_secret_key"
+```
+</RequestExample>
+
+---
+
+## Update a Payment Link
+
+<Card title="PATCH /payment-links/:id" icon="pencil">
+  Update an existing payment link
+</Card>
+
+<ParamField path="id" type="string" required>
+  The payment link ID
+</ParamField>
+
+All fields from the create endpoint can be updated. Only include the fields you want to change.
+
+<RequestExample>
+```bash cURL
+curl -X PATCH "https://api.rollapay.com/payment-links/{id}" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 7500,
+    "description": "Updated invoice amount"
+  }'
+```
+</RequestExample>
+
+---
+
+## Activate / Deactivate a Payment Link
+
+<Card title="POST /payment-links/:id/activate" icon="play">
+  Reactivate a deactivated payment link
+</Card>
+
+<Card title="POST /payment-links/:id/deactivate" icon="pause">
+  Temporarily deactivate a payment link
+</Card>
+
+<RequestExample>
+```bash Deactivate
+curl -X POST "https://api.rollapay.com/payment-links/{id}/deactivate" \
+  -H "Authorization: Bearer sk_live_your_secret_key"
+```
+
+```bash Activate
+curl -X POST "https://api.rollapay.com/payment-links/{id}/activate" \
+  -H "Authorization: Bearer sk_live_your_secret_key"
+```
+</RequestExample>
+
+---
+
+## Payment Link Statuses
+
+| Status | Description |
+|--------|-------------|
+| Active | Link is accepting payments |
+| Inactive | Link is deactivated (can be reactivated) |
+| Expired | Link has passed its `expiresAt` date |
+| Completed | Single-use link that has received a payment |
+
+<Note>
+  When a customer pays through a payment link, you'll receive the same webhooks as a regular transaction (`payment.success`, `payment.failed`). The transaction will include a `paymentLinkId` field linking it to the payment link.
+</Note>

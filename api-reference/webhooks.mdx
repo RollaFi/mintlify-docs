@@ -158,10 +158,10 @@ Verify the signature using your webhook secret:
 ```javascript Node.js
 const crypto = require('crypto');
 
-function verifyWebhook(payload, signature, secret) {
+function verifyWebhook(rawBody, signature, secret) {
   const expectedSignature = crypto
     .createHmac('sha256', secret)
-    .update(JSON.stringify(payload))
+    .update(rawBody) // Use raw request body, NOT JSON.stringify(parsedBody)
     .digest('hex');
 
   return crypto.timingSafeEqual(
@@ -171,11 +171,16 @@ function verifyWebhook(payload, signature, secret) {
 }
 
 // Express.js example
-app.post('/webhook', express.json(), (req, res) => {
+// IMPORTANT: Capture the raw body before JSON parsing
+app.post('/webhook', express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf.toString('utf-8');
+  }
+}), (req, res) => {
   const signature = req.headers['x-rollapay-signature'];
   const webhookSecret = process.env.ROLLA_WEBHOOK_SECRET;
 
-  if (!verifyWebhook(req.body, signature, webhookSecret)) {
+  if (!verifyWebhook(req.rawBody, signature, webhookSecret)) {
     return res.status(401).send('Invalid signature');
   }
 
@@ -199,12 +204,12 @@ app.post('/webhook', express.json(), (req, res) => {
 ```python Python
 import hmac
 import hashlib
-import json
 
-def verify_webhook(payload, signature, secret):
+def verify_webhook(raw_body, signature, secret):
+    # Use raw request body, NOT json.dumps(parsed_body)
     expected_signature = hmac.new(
         secret.encode('utf-8'),
-        json.dumps(payload).encode('utf-8'),
+        raw_body,
         hashlib.sha256
     ).hexdigest()
 
@@ -216,11 +221,13 @@ def webhook():
     signature = request.headers.get('X-RollaPay-Signature')
     webhook_secret = os.environ.get('ROLLA_WEBHOOK_SECRET')
 
-    if not verify_webhook(request.json, signature, webhook_secret):
+    # IMPORTANT: Use request.data (raw bytes) for signature verification
+    if not verify_webhook(request.data, signature, webhook_secret):
         return 'Invalid signature', 401
 
-    event = request.json.get('event')
-    data = request.json.get('data')
+    payload = request.json
+    event = payload.get('event')
+    data = payload.get('data')
 
     if event == 'payment.success':
         # Handle successful payment
