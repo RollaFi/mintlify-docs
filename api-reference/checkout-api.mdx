@@ -1,0 +1,339 @@
+---
+title: 'Checkout API'
+api: 'POST https://api.rollapay.com/transaction/checkout'
+description: 'Create a hosted checkout session — no card details needed. Customer pays on a secure, hosted page.'
+---
+
+## Overview
+
+The Checkout API lets you accept payments without handling card details on your server. You create a checkout session with the amount and customer info, and we return a secure checkout URL. The customer completes payment on our hosted page, and we redirect them back to your site.
+
+**Use this when:**
+- You don't want to handle card details (simplifies PCI compliance)
+- You want a ready-made payment page with no frontend work
+- You need a quick integration (server-side only, no JavaScript SDK needed)
+
+<Note>
+  If you want full control over the payment UI and handle card details yourself, use the [Direct Payment API](/api-reference/initiate-payment) instead.
+</Note>
+
+## Flow
+
+```
+1. Your server → POST /transaction/initialize → Rolla API
+2. Rolla returns checkout_url
+3. You redirect customer to checkout_url
+4. Customer pays on Rolla's hosted page
+5. Customer is redirected to your callbackUrl with reference & status
+6. Your server verifies the transaction via /transaction/verify/:reference
+```
+
+## Authentication
+
+All requests must include your secret API key in the Authorization header:
+
+```
+Authorization: Bearer sk_live_your_secret_key
+```
+
+<Note>
+  Use `sk_test_*` keys for testing and `sk_live_*` keys for production.
+</Note>
+
+## Request Body
+
+<ParamField body="amount" type="number" required>
+  The payment amount (e.g., 5000 for 5000 units of the currency)
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  Three-letter ISO currency code (e.g., "USD", "NGN", "GBP")
+</ParamField>
+
+<ParamField body="customer" type="object" required>
+  Customer information
+  <Expandable title="properties">
+    <ParamField body="email" type="string" required>
+      Customer's email address
+    </ParamField>
+    <ParamField body="name" type="string" required>
+      Customer's full name
+    </ParamField>
+    <ParamField body="phone" type="string">
+      Customer's phone number
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="reference" type="string">
+  Your unique reference for this transaction (e.g., your order ID). If not provided, one will be auto-generated. Must be unique across all transactions.
+</ParamField>
+
+<ParamField body="callbackUrl" type="string">
+  URL to redirect the customer after payment (success or failure). The redirect will include `reference` and `status` as query parameters.
+</ParamField>
+
+<ParamField body="description" type="string">
+  Optional description shown on the checkout page (max 500 characters)
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  Additional key-value pairs to attach to the transaction (e.g., order ID, cart ID)
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Response message
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="reference" type="string">
+      Unique transaction reference — use this to verify the transaction later
+    </ResponseField>
+    <ResponseField name="checkout_url" type="string">
+      The hosted checkout page URL. Redirect your customer here to complete payment.
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Always `pending` at this stage
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "https://api.rollapay.com/transaction/checkout" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 5000,
+    "currency": "USD",
+    "customer": {
+      "email": "customer@example.com",
+      "name": "John Doe"
+    },
+    "reference": "ORD-12345",
+    "callbackUrl": "https://yoursite.com/payment/callback",
+    "description": "Order #12345",
+    "metadata": {
+      "orderId": "ORD-12345"
+    }
+  }'
+```
+
+```javascript Node.js
+const response = await fetch('https://api.rollapay.com/transaction/checkout', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer sk_live_your_secret_key',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    amount: 5000,
+    currency: 'USD',
+    customer: {
+      email: 'customer@example.com',
+      name: 'John Doe',
+    },
+    reference: 'ORD-12345',
+    callbackUrl: 'https://yoursite.com/payment/callback',
+    description: 'Order #12345',
+    metadata: {
+      orderId: 'ORD-12345',
+    },
+  }),
+});
+
+const data = await response.json();
+
+// Redirect customer to checkout
+// res.redirect(data.data.checkout_url);
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.rollapay.com/transaction/checkout',
+    headers={
+        'Authorization': 'Bearer sk_live_your_secret_key',
+        'Content-Type': 'application/json',
+    },
+    json={
+        'amount': 5000,
+        'currency': 'USD',
+        'customer': {
+            'email': 'customer@example.com',
+            'name': 'John Doe',
+        },
+        'reference': 'ORD-12345',
+        'callbackUrl': 'https://yoursite.com/payment/callback',
+        'description': 'Order #12345',
+        'metadata': {
+            'orderId': 'ORD-12345',
+        },
+    }
+)
+
+data = response.json()
+
+# Redirect customer to data['data']['checkout_url']
+```
+
+```php PHP
+<?php
+
+$url = 'https://api.rollapay.com/transaction/checkout';
+
+$data = [
+    'amount' => 5000,
+    'currency' => 'USD',
+    'customer' => [
+        'email' => 'customer@example.com',
+        'name' => 'John Doe',
+    ],
+    'reference' => 'ORD-12345',
+    'callbackUrl' => 'https://yoursite.com/payment/callback',
+    'description' => 'Order #12345',
+    'metadata' => [
+        'orderId' => 'ORD-12345',
+    ],
+];
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer sk_live_your_secret_key',
+    'Content-Type: application/json'
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+$result = json_decode($response, true);
+
+// Redirect customer to $result['data']['checkout_url']
+```
+
+```java Java
+import java.net.http.*;
+import java.net.URI;
+
+HttpClient client = HttpClient.newHttpClient();
+
+String body = """
+    {
+      "amount": 5000,
+      "currency": "USD",
+      "customer": {
+        "email": "customer@example.com",
+        "name": "John Doe"
+      },
+      "reference": "ORD-12345",
+      "callbackUrl": "https://yoursite.com/payment/callback",
+      "description": "Order #12345",
+      "metadata": {
+        "orderId": "ORD-12345"
+      }
+    }
+    """;
+
+HttpRequest request = HttpRequest.newBuilder()
+    .uri(URI.create("https://api.rollapay.com/transaction/checkout"))
+    .header("Authorization", "Bearer sk_live_your_secret_key")
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString(body))
+    .build();
+
+HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+// Parse response and redirect customer to checkout_url
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 Success
+{
+  "success": true,
+  "status": 200,
+  "message": "Checkout session created",
+  "data": {
+    "reference": "ORD-12345",
+    "checkout_url": "https://pay.rollapay.com/checkout/ORD-12345",
+    "status": "pending"
+  }
+}
+```
+
+```json 400 Validation Error
+{
+  "success": false,
+  "status": 400,
+  "message": "customer.name: Customer name is required"
+}
+```
+
+```json 401 Unauthorized
+{
+  "success": false,
+  "status": 401,
+  "message": "Invalid API key"
+}
+```
+
+```json 409 Duplicate Reference
+{
+  "success": false,
+  "status": 409,
+  "message": "Transaction with reference 'ORD-12345' already exists"
+}
+```
+</ResponseExample>
+
+## Callback Redirect
+
+After the customer completes (or fails) payment, they are redirected to your `callbackUrl` with the following query parameters:
+
+```
+https://yoursite.com/payment/callback?reference=ORD-12345&status=successful
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `reference` | The transaction reference |
+| `status` | `successful` or `failed` |
+| `message` | Error message (only present when `status` is `failed`) |
+
+<Warning>
+  Do not rely solely on the callback redirect to confirm payment. Always verify the transaction server-side using the [Verify Transaction](/api-reference/verify-transaction) endpoint before fulfilling the order.
+</Warning>
+
+## Verifying the Transaction
+
+After the customer is redirected back, verify the transaction on your server:
+
+```bash
+curl "https://api.rollapay.com/transaction/verify/ORD-12345" \
+  -H "Authorization: Bearer sk_live_your_secret_key"
+```
+
+See [Verify Transaction](/api-reference/verify-transaction) for full details.
+
+## Webhooks
+
+In addition to the callback redirect, you can configure webhooks to receive real-time notifications when a transaction status changes. This is recommended for reliable payment confirmation.
+
+See [Webhooks](/api-reference/webhooks) for setup instructions.
+
+## Test Mode
+
+Use your `sk_test_*` secret key to create test checkout sessions. Test transactions use sandbox processors and test cards.
+
+See [Test Cards](/api-reference/test-cards) for available test card numbers.

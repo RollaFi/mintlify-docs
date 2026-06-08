@@ -51,6 +51,7 @@
                 "pages": [
                   "api-reference/test-cards",
                   "api-reference/initiate-payment",
+                  "api-reference/checkout-api",
                   "api-reference/verify-transaction",
                   "api-reference/refunds",
                   "api-reference/response-codes"

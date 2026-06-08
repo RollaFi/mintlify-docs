@@ -1,8 +1,21 @@
 ---
-title: 'Initiate Payment'
+title: 'Direct Payment API'
 api: 'POST https://api.rollapay.com/transaction/initiate'
-description: 'Create a new payment transaction'
+description: 'Process a payment directly with card details from your server'
 ---
+
+## Overview
+
+The Direct Payment API lets you charge a card directly from your server. You collect the card details and send them in the request — giving you full control over the payment experience.
+
+**Use this when:**
+- You have your own payment form and collect card details yourself
+- You need full control over the checkout UI
+- You're building a mobile app or custom integration
+
+<Note>
+  If you don't want to handle card details, use the [Checkout API](/api-reference/checkout-api) instead — it provides a secure hosted payment page.
+</Note>
 
 ## Authentication
 
