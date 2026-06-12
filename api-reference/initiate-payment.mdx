@@ -104,8 +104,8 @@ Authorization: Bearer sk_live_your_secret_key
   </Expandable>
 </ParamField>
 
-<ParamField body="callbackUrl" type="string">
-  URL to redirect the customer after payment completion
+<ParamField body="callbackUrl" type="string" required>
+  URL to redirect the customer after payment completion. Query parameters `reference` and `status` (successful/failed) will be appended.
 </ParamField>
 
 <ParamField body="description" type="string">
