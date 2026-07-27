@@ -1,0 +1,434 @@
+---
+title: 'Card Payment'
+api: 'POST https://api.rollapay.com/transaction/initiate'
+description: 'Process a card payment directly with card details from your server'
+---
+
+## Overview
+
+Charge a customer's card directly by sending card details from your server. Depending on the card and issuing bank, the payment may complete immediately or require additional authentication (3D Secure redirect, OTP, or PIN).
+
+<Note>
+  If you don't want to handle card details, use the [Checkout API](/api-reference/checkout-api) instead — it provides a secure hosted payment page.
+</Note>
+
+## Authentication
+
+All requests must include your secret API key in the Authorization header:
+
+```
+Authorization: Bearer sk_live_your_secret_key
+```
+
+<Note>
+  Use `sk_test_*` keys for testing and `sk_live_*` keys for production.
+</Note>
+
+## Request Body
+
+### Common Parameters
+
+<ParamField body="reference" type="string">
+  Optional custom transaction reference. If not provided, a unique reference will be auto-generated (e.g., `TXN_gGbEEvK25eVgmgrf`). Must be globally unique across all transactions.
+</ParamField>
+
+<ParamField body="amount" type="number" required>
+  The payment amount (e.g., 1000 for 1000 units of the currency)
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  Three-letter ISO currency code (e.g., "USD", "NGN", "GBP")
+</ParamField>
+
+<ParamField body="channel" type="string" required>
+  Must be `card` for card payments
+</ParamField>
+
+<ParamField body="customer" type="object" required>
+  Customer information
+  <Expandable title="properties">
+    <ParamField body="email" type="string" required>
+      Customer's email address
+    </ParamField>
+    <ParamField body="name" type="string">
+      Customer's full name
+    </ParamField>
+    <ParamField body="phone" type="string">
+      Customer's phone number
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="callbackUrl" type="string" required>
+  URL to redirect the customer after payment completion. Query parameters `reference` and `status` (successful/failed) will be appended.
+</ParamField>
+
+<ParamField body="description" type="string">
+  Optional description for the payment (max 500 characters)
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  Additional key-value pairs to attach to the transaction (e.g., order ID)
+</ParamField>
+
+### Card Parameters
+
+<ParamField body="card" type="object" required>
+  Card details (required for card payments)
+  <Expandable title="properties">
+    <ParamField body="number" type="string" required>
+      Card number (13-19 digits)
+    </ParamField>
+    <ParamField body="expiryMonth" type="string" required>
+      Card expiry month (2 digits, e.g., "01" for January)
+    </ParamField>
+    <ParamField body="expiryYear" type="string" required>
+      Card expiry year (2 or 4 digits, e.g., "27" or "2027")
+    </ParamField>
+    <ParamField body="cvv" type="string" required>
+      Card CVV/CVC (3-4 digits)
+    </ParamField>
+    <ParamField body="holderName" type="string">
+      Cardholder name as it appears on the card
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="billing" type="object">
+  Billing address (recommended for international cards to reduce declines)
+  <Expandable title="properties">
+    <ParamField body="address" type="string">
+      Street address
+    </ParamField>
+    <ParamField body="city" type="string">
+      City
+    </ParamField>
+    <ParamField body="state" type="string">
+      State or province
+    </ParamField>
+    <ParamField body="country" type="string">
+      Country code (e.g., "US", "NG")
+    </ParamField>
+    <ParamField body="postalCode" type="string">
+      Postal/ZIP code
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Response message
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="reference" type="string">
+      Unique transaction reference (e.g., `TXN_gGbEEvK25eVgmgrf`) or your custom reference if provided
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Transaction status: `requires_action`, `successful`, or `failed`
+    </ResponseField>
+    <ResponseField name="payment_url" type="string">
+      URL to redirect the customer for payment authentication (3D Secure, etc.). Present when `next_action` is `redirect`.
+    </ResponseField>
+    <ResponseField name="next_action" type="string">
+      Indicates the next action required when `status` is `requires_action`. Possible values: `redirect` (redirect to payment_url), `otp` (submit OTP), `pin` (submit PIN)
+    </ResponseField>
+    <ResponseField name="message" type="string">
+      Additional message providing context (e.g., "Please enter the OTP sent to your phone")
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash curl
+curl -X POST "https://api.rollapay.com/transaction/initiate" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reference": "ORD-12345",
+    "amount": 1000,
+    "currency": "USD",
+    "channel": "card",
+    "customer": {
+      "email": "customer@example.com",
+      "name": "John Doe",
+      "phone": "08012345678"
+    },
+    "card": {
+      "number": "5123450000000008",
+      "expiryMonth": "11",
+      "expiryYear": "2027",
+      "cvv": "100",
+      "holderName": "John Doe"
+    },
+    "callbackUrl": "https://yoursite.com/callback",
+    "description": "Order #12345",
+    "metadata": {
+      "orderId": "ORD-123"
+    },
+    "billing": {
+      "address": "123 Main Street",
+      "city": "Lagos",
+      "country": "NG",
+      "postalCode": "100001"
+    }
+  }'
+```
+
+```javascript Node.js
+const response = await fetch('https://api.rollapay.com/transaction/initiate', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer sk_live_your_secret_key',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    reference: 'ORD-12345',
+    amount: 1000,
+    currency: 'USD',
+    channel: 'card',
+    customer: {
+      email: 'customer@example.com',
+      name: 'John Doe',
+      phone: '08012345678'
+    },
+    card: {
+      number: '5123450000000008',
+      expiryMonth: '11',
+      expiryYear: '2027',
+      cvv: '100',
+      holderName: 'John Doe'
+    },
+    callbackUrl: 'https://yoursite.com/callback',
+    description: 'Order #12345',
+    metadata: {
+      orderId: 'ORD-123'
+    },
+    billing: {
+      address: '123 Main Street',
+      city: 'Lagos',
+      country: 'NG',
+      postalCode: '100001'
+    }
+  }),
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.rollapay.com/transaction/initiate',
+    headers={
+        'Authorization': 'Bearer sk_live_your_secret_key',
+        'Content-Type': 'application/json',
+    },
+    json={
+        'reference': 'ORD-12345',
+        'amount': 1000,
+        'currency': 'USD',
+        'channel': 'card',
+        'customer': {
+            'email': 'customer@example.com',
+            'name': 'John Doe',
+            'phone': '08012345678'
+        },
+        'card': {
+            'number': '5123450000000008',
+            'expiryMonth': '11',
+            'expiryYear': '2027',
+            'cvv': '100',
+            'holderName': 'John Doe'
+        },
+        'callbackUrl': 'https://yoursite.com/callback',
+        'description': 'Order #12345',
+        'metadata': {
+            'orderId': 'ORD-123'
+        },
+        'billing': {
+            'address': '123 Main Street',
+            'city': 'Lagos',
+            'country': 'NG',
+            'postalCode': '100001'
+        }
+    }
+)
+
+data = response.json()
+```
+
+```php PHP
+<?php
+
+$url = 'https://api.rollapay.com/transaction/initiate';
+
+$data = [
+    'reference' => 'ORD-12345',
+    'amount' => 1000,
+    'currency' => 'USD',
+    'channel' => 'card',
+    'customer' => [
+        'email' => 'customer@example.com',
+        'name' => 'John Doe',
+        'phone' => '08012345678'
+    ],
+    'card' => [
+        'number' => '5123450000000008',
+        'expiryMonth' => '11',
+        'expiryYear' => '2027',
+        'cvv' => '100',
+        'holderName' => 'John Doe'
+    ],
+    'callbackUrl' => 'https://yoursite.com/callback',
+    'description' => 'Order #12345',
+    'metadata' => [
+        'orderId' => 'ORD-123'
+    ],
+    'billing' => [
+        'address' => '123 Main Street',
+        'city' => 'Lagos',
+        'country' => 'NG',
+        'postalCode' => '100001'
+    ]
+];
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer sk_live_your_secret_key',
+    'Content-Type: application/json'
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+$result = json_decode($response, true);
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 Requires Redirect (3DS)
+{
+  "success": true,
+  "message": "Transaction initiated",
+  "data": {
+    "reference": "ORD-12345",
+    "status": "requires_action",
+    "next_action": "redirect",
+    "payment_url": "https://checkout.rolla.io/pay?ref=ROLLA-G-123456789-ABC123"
+  }
+}
+```
+
+```json 200 Requires OTP
+{
+  "success": true,
+  "message": "Please enter the OTP sent to your phone",
+  "data": {
+    "reference": "ORD-12345",
+    "status": "requires_action",
+    "next_action": "otp",
+    "payment_url": null
+  }
+}
+```
+
+```json 200 Requires PIN
+{
+  "success": true,
+  "message": "Please enter your card PIN",
+  "data": {
+    "reference": "ORD-12345",
+    "status": "requires_action",
+    "next_action": "pin",
+    "payment_url": null
+  }
+}
+```
+
+```json 200 Successful (No Auth Required)
+{
+  "success": true,
+  "message": "Transaction initiated",
+  "data": {
+    "reference": "TXN_hHcFFwL36fWhnhsg",
+    "status": "successful"
+  }
+}
+```
+
+```json 400 Validation Error
+{
+  "success": false,
+  "message": "card: Card details are required for card payments"
+}
+```
+
+```json 401 Unauthorized
+{
+  "success": false,
+  "message": "Invalid API key"
+}
+```
+
+```json 409 Duplicate Reference
+{
+  "success": false,
+  "message": "Transaction with reference 'ORD-12345' already exists"
+}
+```
+</ResponseExample>
+
+## Test Cards
+
+Use these test cards with your `sk_test_*` API key in sandbox mode:
+
+<Tabs>
+  <Tab title="Mastercard">
+    | Field | Value |
+    |-------|-------|
+    | Card Number | `5123450000000008` |
+    | Expiry Month | `01` |
+    | Expiry Year | `2030` |
+    | CVV | `123` |
+  </Tab>
+</Tabs>
+
+<Warning>
+  Test cards only work with `sk_test_*` API keys. They will be rejected in production mode.
+</Warning>
+
+## Next Steps
+
+After initiating a card payment, check the `status` and `next_action` fields to determine what to do next:
+
+### `next_action` is `redirect`
+1. Redirect the customer to `payment_url`
+2. The customer completes authentication (3D Secure, etc.)
+3. Customer is redirected back to your `callbackUrl`
+4. Use the [Verify Transaction](/api-reference/verify-transaction) endpoint to confirm the final status
+
+### `status` is `successful`
+The transaction completed immediately without additional authentication.
+1. Use the [Verify Transaction](/api-reference/verify-transaction) endpoint to confirm the final status
+
+### `next_action` is `otp`
+1. Display an OTP input form to the customer
+2. Submit the OTP using the Submit OTP endpoint *(coming soon)*
+3. Use the [Verify Transaction](/api-reference/verify-transaction) endpoint to confirm the final status
+
+### `next_action` is `pin`
+1. Display a PIN input form to the customer
+2. Submit the PIN using the Submit PIN endpoint *(coming soon)*
+3. The response may return another `next_action` (e.g., `otp`) — handle accordingly
+4. Use the [Verify Transaction](/api-reference/verify-transaction) endpoint to confirm the final status

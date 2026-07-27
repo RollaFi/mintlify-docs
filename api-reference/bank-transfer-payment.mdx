@@ -1,0 +1,289 @@
+---
+title: 'Bank Transfer Payment'
+api: 'POST https://api.rollapay.com/transaction/initiate'
+description: 'Generate a virtual account for customers to pay via bank transfer'
+---
+
+## Overview
+
+Initiate a bank transfer payment by generating a temporary virtual account. The customer transfers the exact amount from their banking app, and the payment is confirmed automatically once the transfer is received.
+
+No card details are needed — just specify `bank_transfer` as the channel and provide customer information.
+
+<Note>
+  Bank transfer is currently available for NGN (Nigerian Naira) payments.
+</Note>
+
+## Authentication
+
+All requests must include your secret API key in the Authorization header:
+
+```
+Authorization: Bearer sk_live_your_secret_key
+```
+
+<Note>
+  Use `sk_test_*` keys for testing and `sk_live_*` keys for production.
+</Note>
+
+## Request Body
+
+<ParamField body="reference" type="string">
+  Optional custom transaction reference. If not provided, a unique reference will be auto-generated (e.g., `TXN_gGbEEvK25eVgmgrf`). Must be globally unique across all transactions.
+</ParamField>
+
+<ParamField body="amount" type="number" required>
+  The payment amount (e.g., 5000 for 5000 NGN)
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  Three-letter ISO currency code. Use `NGN` for bank transfers.
+</ParamField>
+
+<ParamField body="channel" type="string" required>
+  Must be `bank_transfer`
+</ParamField>
+
+<ParamField body="customer" type="object" required>
+  Customer information
+  <Expandable title="properties">
+    <ParamField body="email" type="string" required>
+      Customer's email address
+    </ParamField>
+    <ParamField body="name" type="string">
+      Customer's full name
+    </ParamField>
+    <ParamField body="phone" type="string">
+      Customer's phone number
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="callbackUrl" type="string" required>
+  URL to redirect the customer after payment completion. Query parameters `reference` and `status` (successful/failed) will be appended.
+</ParamField>
+
+<ParamField body="description" type="string">
+  Optional description for the payment (max 500 characters)
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  Additional key-value pairs to attach to the transaction (e.g., order ID)
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Response message
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="reference" type="string">
+      Unique transaction reference (e.g., `TXN_d7WblCDVuoqiQAMB`) or your custom reference if provided
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Transaction status. Will be `pending` — waiting for the customer to transfer.
+    </ResponseField>
+    <ResponseField name="account_number" type="string">
+      Virtual account number the customer should transfer to
+    </ResponseField>
+    <ResponseField name="bank_name" type="string">
+      Bank name for the virtual account (e.g., "NET Microfinance Bank")
+    </ResponseField>
+    <ResponseField name="account_name" type="string">
+      Account name for the virtual account
+    </ResponseField>
+    <ResponseField name="account_type" type="string">
+      Type of virtual account: `dynamic` (expires after timeout)
+    </ResponseField>
+    <ResponseField name="amount" type="number">
+      Exact amount the customer must transfer
+    </ResponseField>
+    <ResponseField name="expires_at" type="string">
+      ISO 8601 timestamp when the virtual account expires (e.g., `2026-07-23T12:30:00.000Z`)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash curl
+curl -X POST "https://api.rollapay.com/transaction/initiate" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 5000,
+    "currency": "NGN",
+    "channel": "bank_transfer",
+    "customer": {
+      "email": "customer@example.com",
+      "name": "John Doe",
+      "phone": "08012345678"
+    },
+    "callbackUrl": "https://yoursite.com/callback",
+    "metadata": {
+      "orderId": "ORD-456"
+    }
+  }'
+```
+
+```javascript Node.js
+const response = await fetch('https://api.rollapay.com/transaction/initiate', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer sk_live_your_secret_key',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    amount: 5000,
+    currency: 'NGN',
+    channel: 'bank_transfer',
+    customer: {
+      email: 'customer@example.com',
+      name: 'John Doe',
+      phone: '08012345678'
+    },
+    callbackUrl: 'https://yoursite.com/callback',
+    metadata: {
+      orderId: 'ORD-456'
+    }
+  }),
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.rollapay.com/transaction/initiate',
+    headers={
+        'Authorization': 'Bearer sk_live_your_secret_key',
+        'Content-Type': 'application/json',
+    },
+    json={
+        'amount': 5000,
+        'currency': 'NGN',
+        'channel': 'bank_transfer',
+        'customer': {
+            'email': 'customer@example.com',
+            'name': 'John Doe',
+            'phone': '08012345678'
+        },
+        'callbackUrl': 'https://yoursite.com/callback',
+        'metadata': {
+            'orderId': 'ORD-456'
+        }
+    }
+)
+
+data = response.json()
+```
+
+```php PHP
+<?php
+
+$url = 'https://api.rollapay.com/transaction/initiate';
+
+$data = [
+    'amount' => 5000,
+    'currency' => 'NGN',
+    'channel' => 'bank_transfer',
+    'customer' => [
+        'email' => 'customer@example.com',
+        'name' => 'John Doe',
+        'phone' => '08012345678'
+    ],
+    'callbackUrl' => 'https://yoursite.com/callback',
+    'metadata' => [
+        'orderId' => 'ORD-456'
+    ]
+];
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer sk_live_your_secret_key',
+    'Content-Type: application/json'
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+$result = json_decode($response, true);
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 Virtual Account Created
+{
+  "success": true,
+  "message": "Virtual account created successfully",
+  "data": {
+    "reference": "TXN_d7WblCDVuoqiQAMB",
+    "status": "pending",
+    "account_number": "9002389673",
+    "bank_name": "NET Microfinance Bank",
+    "account_name": "Rolla Pay",
+    "account_type": "dynamic",
+    "amount": 5000,
+    "expires_at": "2026-07-23T12:30:00.000Z"
+  }
+}
+```
+
+```json 400 Validation Error
+{
+  "success": false,
+  "message": "channel: bank_transfer is only supported for NGN currency"
+}
+```
+
+```json 401 Unauthorized
+{
+  "success": false,
+  "message": "Invalid API key"
+}
+```
+
+```json 409 Duplicate Reference
+{
+  "success": false,
+  "message": "Transaction with reference 'ORD-456' already exists"
+}
+```
+</ResponseExample>
+
+## Next Steps
+
+After initiating a bank transfer, the response status will be `pending`. Here's how to complete the payment:
+
+### 1. Display the virtual account details
+Show the customer the account they need to transfer to:
+- **Account Number** — `account_number`
+- **Bank Name** — `bank_name`
+- **Account Name** — `account_name`
+- **Amount** — `amount` (the customer must transfer the exact amount)
+
+### 2. Show the expiry countdown
+Use `expires_at` to display a countdown timer. The virtual account is only valid until this time.
+
+### 3. Customer transfers from their bank
+The customer opens their banking app and transfers the exact amount to the virtual account.
+
+### 4. Poll for payment confirmation
+Poll the [Verify Transaction](/api-reference/verify-transaction) endpoint every 3-5 seconds to check if the payment has been received. Once `status` changes to `successful`, the payment is complete.
+
+### 5. Webhook notification
+You will also receive a [webhook](/api-reference/webhooks) notification when the payment is confirmed.
+
+<Warning>
+  Bank transfer virtual accounts expire after 30 minutes by default. If the customer does not transfer within this window, the transaction will expire and a new one must be initiated.
+</Warning>

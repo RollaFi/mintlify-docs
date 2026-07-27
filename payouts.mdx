@@ -1,0 +1,66 @@
+---
+title: 'Payouts'
+description: 'Send money from your wallet to any bank account or mobile money wallet'
+---
+
+## Overview
+
+Rolla Pay Payouts lets you disburse funds from your wallet to any recipient — bank accounts or mobile money wallets. Use it for salary payments, vendor disbursements, commission payouts, customer refunds, and more.
+
+## How It Works
+
+1. **Fund your wallet** — Your wallet is funded automatically from settled transactions, or manually via bank deposit.
+2. **Initiate a payout** — Call the API with the amount, recipient details, and a signed request.
+3. **Payout is processed** — Rolla Pay routes the payout to the appropriate processor (bank transfer or mobile money).
+4. **Receive confirmation** — A webhook notification is sent when the payout completes or fails.
+
+## Payout Methods
+
+| Method | Currencies | Description |
+|--------|-----------|-------------|
+| Bank Transfer | NGN | Send to any Nigerian bank account via NIP |
+| Mobile Money | GHS, KES, ZMW | Send to mobile money wallets |
+
+## Security
+
+All payout requests require **HMAC-SHA512 signature verification**. You sign the request body with your secret key and include the signature in the `X-Payout-Signature` header. This ensures the request hasn't been tampered with.
+
+```
+Signature = HMAC-SHA512(request_body, secret_key)
+```
+
+## Payout Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Pending: API call accepted
+    Pending --> Processing: Sent to processor
+    Processing --> Completed: Confirmed by processor
+    Processing --> Failed: Rejected / reversed
+    Failed --> [*]: Funds refunded to wallet
+    Completed --> [*]: Funds delivered
+```
+
+## Quick Example
+
+```bash
+curl -X POST "https://api.rollapay.com/payouts" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "X-Payout-Signature: your_hmac_signature" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 1000,
+    "currency": "NGN",
+    "destination": {
+      "type": "bank_account",
+      "bank_code": "000013",
+      "account_number": "0123456789",
+      "account_name": "John Doe"
+    },
+    "narration": "Salary payment"
+  }'
+```
+
+<Note>
+For full request/response details and code examples, see the [Payout API Reference](/api-reference/payouts).
+</Note>

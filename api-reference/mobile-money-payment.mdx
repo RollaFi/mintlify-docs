@@ -1,0 +1,269 @@
+---
+title: 'Mobile Money Payment'
+api: 'POST https://api.rollapay.com/transaction/initiate'
+description: 'Accept payments via mobile money (M-Pesa, MTN MoMo, Airtel Money, etc.)'
+---
+
+## Overview
+
+Accept payments from mobile money wallets across Africa. When you initiate a mobile money payment, the customer receives an STK push (payment prompt) on their phone and confirms the payment by entering their mobile money PIN.
+
+**Supported currencies:** `GHS` (Ghana), `KES` (Kenya), `ZMW` (Zambia)
+
+<Note>
+  The customer's phone number is required for mobile money payments — this is the number linked to their mobile money wallet.
+</Note>
+
+## Authentication
+
+All requests must include your secret API key in the Authorization header:
+
+```
+Authorization: Bearer sk_live_your_secret_key
+```
+
+<Note>
+  Use `sk_test_*` keys for testing and `sk_live_*` keys for production.
+</Note>
+
+## Request Body
+
+<ParamField body="reference" type="string">
+  Optional custom transaction reference. If not provided, a unique reference will be auto-generated (e.g., `TXN_gGbEEvK25eVgmgrf`). Must be globally unique across all transactions.
+</ParamField>
+
+<ParamField body="amount" type="number" required>
+  The payment amount (e.g., 100 for 100 units of the currency)
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  Three-letter ISO currency code. Supported: `GHS`, `KES`, `ZMW`
+</ParamField>
+
+<ParamField body="channel" type="string" required>
+  Must be `mobile_money`
+</ParamField>
+
+<ParamField body="customer" type="object" required>
+  Customer information
+  <Expandable title="properties">
+    <ParamField body="email" type="string" required>
+      Customer's email address
+    </ParamField>
+    <ParamField body="name" type="string">
+      Customer's full name
+    </ParamField>
+    <ParamField body="phone" type="string" required>
+      Customer's mobile money phone number (e.g., "233241234567" for Ghana, "254712345678" for Kenya). Must include the country code.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="callbackUrl" type="string" required>
+  URL to redirect the customer after payment completion. Query parameters `reference` and `status` (successful/failed) will be appended.
+</ParamField>
+
+<ParamField body="description" type="string">
+  Optional description for the payment (max 500 characters)
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  Additional key-value pairs to attach to the transaction (e.g., order ID)
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Response message
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="reference" type="string">
+      Unique transaction reference or your custom reference if provided
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Transaction status. Will be `pending` — waiting for the customer to confirm on their phone.
+    </ResponseField>
+    <ResponseField name="message" type="string">
+      Additional context (e.g., "STK push sent to customer's phone")
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash curl
+curl -X POST "https://api.rollapay.com/transaction/initiate" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reference": "ORD-78901",
+    "amount": 100,
+    "currency": "GHS",
+    "channel": "mobile_money",
+    "customer": {
+      "email": "customer@example.com",
+      "name": "Kwame Asante",
+      "phone": "233241234567"
+    },
+    "callbackUrl": "https://yoursite.com/callback",
+    "description": "Order #78901",
+    "metadata": {
+      "orderId": "ORD-789"
+    }
+  }'
+```
+
+```javascript Node.js
+const response = await fetch('https://api.rollapay.com/transaction/initiate', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer sk_live_your_secret_key',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    reference: 'ORD-78901',
+    amount: 100,
+    currency: 'GHS',
+    channel: 'mobile_money',
+    customer: {
+      email: 'customer@example.com',
+      name: 'Kwame Asante',
+      phone: '233241234567'
+    },
+    callbackUrl: 'https://yoursite.com/callback',
+    description: 'Order #78901',
+    metadata: {
+      orderId: 'ORD-789'
+    }
+  }),
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.rollapay.com/transaction/initiate',
+    headers={
+        'Authorization': 'Bearer sk_live_your_secret_key',
+        'Content-Type': 'application/json',
+    },
+    json={
+        'reference': 'ORD-78901',
+        'amount': 100,
+        'currency': 'GHS',
+        'channel': 'mobile_money',
+        'customer': {
+            'email': 'customer@example.com',
+            'name': 'Kwame Asante',
+            'phone': '233241234567'
+        },
+        'callbackUrl': 'https://yoursite.com/callback',
+        'description': 'Order #78901',
+        'metadata': {
+            'orderId': 'ORD-789'
+        }
+    }
+)
+
+data = response.json()
+```
+
+```php PHP
+<?php
+
+$url = 'https://api.rollapay.com/transaction/initiate';
+
+$data = [
+    'reference' => 'ORD-78901',
+    'amount' => 100,
+    'currency' => 'GHS',
+    'channel' => 'mobile_money',
+    'customer' => [
+        'email' => 'customer@example.com',
+        'name' => 'Kwame Asante',
+        'phone' => '233241234567'
+    ],
+    'callbackUrl' => 'https://yoursite.com/callback',
+    'description' => 'Order #78901',
+    'metadata' => [
+        'orderId' => 'ORD-789'
+    ]
+];
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer sk_live_your_secret_key',
+    'Content-Type: application/json'
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+$result = json_decode($response, true);
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 STK Push Sent
+{
+  "success": true,
+  "message": "STK push sent to customer's phone",
+  "data": {
+    "reference": "ORD-78901",
+    "status": "pending"
+  }
+}
+```
+
+```json 400 Validation Error
+{
+  "success": false,
+  "message": "customer.phone: Phone number is required for mobile money payments"
+}
+```
+
+```json 401 Unauthorized
+{
+  "success": false,
+  "message": "Invalid API key"
+}
+```
+
+```json 409 Duplicate Reference
+{
+  "success": false,
+  "message": "Transaction with reference 'ORD-78901' already exists"
+}
+```
+</ResponseExample>
+
+## Next Steps
+
+After initiating a mobile money payment, the response status will be `pending`. Here's how the flow works:
+
+### 1. STK push is sent
+The customer receives a payment prompt (STK push) on their phone automatically. No redirect is needed.
+
+### 2. Customer confirms on their phone
+The customer enters their mobile money PIN on their phone to authorize the payment.
+
+### 3. Poll for payment confirmation
+Poll the [Verify Transaction](/api-reference/verify-transaction) endpoint every 3-5 seconds to check if the payment has been confirmed. Once `status` changes to `successful`, the payment is complete.
+
+### 4. Webhook notification
+You will also receive a [webhook](/api-reference/webhooks) notification when the payment is confirmed.
+
+<Warning>
+  If the customer does not confirm the STK push within the timeout window (typically 1-2 minutes), the transaction will expire and a new one must be initiated.
+</Warning>

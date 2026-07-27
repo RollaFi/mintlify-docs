@@ -1,0 +1,52 @@
+---
+title: 'Payments'
+description: 'Accept payments from your customers via card, bank transfer, or mobile money'
+---
+
+## Overview
+
+Rolla Pay allows you to accept payments from customers across multiple channels and currencies. Whether you're collecting card payments in Nigeria, mobile money in Ghana, or bank transfers — the integration is the same simple API.
+
+## How It Works
+
+1. **Initiate a payment** — Your server calls the Rolla Pay API with the amount, currency, and customer details.
+2. **Customer pays** — Depending on the channel, the customer completes payment via card form, USSD prompt, bank transfer, or mobile money.
+3. **Verify the payment** — Once the customer pays, verify the transaction status via the API or receive a webhook notification.
+4. **Settlement** — Funds are settled to your wallet or bank account based on your configuration.
+
+## Payment Channels
+
+| Channel | Currencies | Description |
+|---------|-----------|-------------|
+| Card | USD, GHS| Visa, Mastercard, Verve — 3DS supported |
+| Bank Transfer | NGN | Customer transfers to a dynamic virtual account |
+| Mobile Money | GHS, KES, ZMW | STK push / USSD prompt on customer's phone |
+
+## Integration Options
+
+<CardGroup cols={2}>
+  <Card title="Direct API" icon="code" href="/api-reference/initiate-payment">
+    Collect payment details on your own page and send them to Rolla Pay via API. Full control over the checkout experience.
+  </Card>
+  <Card title="Hosted Checkout" icon="window-maximize" href="/api-reference/checkout-api">
+    Redirect customers to Rolla Pay's secure hosted checkout page. No PCI compliance needed on your end.
+  </Card>
+</CardGroup>
+
+## Quick Example
+
+```bash
+curl -X POST "https://api.rollapay.com/transaction/initiate" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 5000,
+    "currency": "NGN",
+    "email": "customer@example.com",
+    "channel": "card"
+  }'
+```
+
+<Note>
+For full request/response details, see the [API Reference](/api-reference/initiate-payment).
+</Note>
