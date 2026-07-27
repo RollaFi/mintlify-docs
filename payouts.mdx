@@ -34,8 +34,8 @@ Signature = HMAC-SHA512(request_body, secret_key)
 ```mermaid
 stateDiagram-v2
     [*] --> Pending: API call accepted
-    Pending --> Processing: Sent to processor
-    Processing --> Completed: Confirmed by processor
+    Pending --> Processing: Processing Payment
+    Processing --> Completed: Processing Payment Completed
     Processing --> Failed: Rejected / reversed
     Failed --> [*]: Funds refunded to wallet
     Completed --> [*]: Funds delivered
