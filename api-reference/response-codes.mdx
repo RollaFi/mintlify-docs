@@ -5,7 +5,7 @@ description: 'Rolla Pay response codes and their meanings'
 
 # Response Codes
 
-Every transaction includes a `response_code` and `response_message` that indicate the outcome. These are Rolla's normalized codes — consistent across all payment processors.
+Every transaction includes a `response_code` and `response_message` that indicate the outcome. These are Rolla's normalized codes — consistent across all payment processors and payment channels, including card, bank transfer, and mobile money.
 
 ## Response Structure
 
@@ -201,6 +201,7 @@ async function handlePaymentResponse(response) {
 ```
 
 <Note>
-  The `response_code` is Rolla's normalized code, consistent across all processors.
+  The `response_code` is Rolla's normalized code, consistent across all processors and payment channels.
+  Bank transfer transactions use the same response codes as card payments — `00` for success, `60` for insufficient funds, etc.
   The `gateway_response` contains the raw processor response for advanced debugging.
 </Note>

@@ -50,6 +50,18 @@ When an error occurs, the API returns an appropriate HTTP status code along with
 }
 ```
 
+## Payment Channels
+
+The following channels are available depending on the merchant's currency configuration:
+
+| Channel | Value | Description |
+|---------|-------|-------------|
+| Card | `card` | Credit and debit card payments |
+| Bank Transfer | `bank_transfer` | Direct bank transfers (NGN) |
+| Mobile Money | `mobile_money` | Mobile money payments (GHS) |
+
+---
+
 ### HTTP Status Codes
 
 | Code | Description |

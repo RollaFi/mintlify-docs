@@ -1,0 +1,398 @@
+---
+title: 'Payouts'
+description: 'Disburse funds from your wallet to any bank account or mobile money wallet'
+---
+
+## Overview
+
+The Payout API allows you to programmatically send money from your Rolla Pay wallet to any bank account or mobile money number. Use it for salary disbursements, vendor payments, commission payouts, and more.
+
+## Payout Flow
+
+```mermaid
+sequenceDiagram
+    participant M as Merchant Server
+    participant R as Rolla Pay API
+    participant P as Processor
+
+    M->>M: Generate HMAC-SHA512 signature
+    M->>R: POST /payouts (with X-Payout-Signature)
+    R->>R: Verify signature
+    R->>R: Debit wallet
+    R->>P: Process transfer
+    P-->>R: Transfer result
+    R-->>M: Webhook (payout.completed / payout.failed)
+```
+
+## Security
+
+Payout requests require **HMAC-SHA512 signature verification** in addition to your secret key. This ensures the request body has not been tampered with.
+
+### Generating the Signature
+
+Compute `HMAC-SHA512` of the JSON request body using your **secret key** as the signing key, and send it in the `X-Payout-Signature` header.
+
+<CodeGroup>
+```javascript Node.js
+const crypto = require('crypto');
+
+const secretKey = 'sk_live_your_secret_key';
+const body = JSON.stringify({
+  amount: 1000,
+  currency: 'NGN',
+  destination: {
+    type: 'bank_account',
+    bank_code: '000013',
+    account_number: '0123456789',
+    account_name: 'John Doe'
+  },
+  narration: 'Salary payment'
+});
+
+const signature = crypto
+  .createHmac('sha512', secretKey)
+  .update(body)
+  .digest('hex');
+
+// Send as: X-Payout-Signature: <signature>
+```
+
+```python Python
+import hmac
+import hashlib
+import json
+
+secret_key = 'sk_live_your_secret_key'
+body = json.dumps({
+    'amount': 1000,
+    'currency': 'NGN',
+    'destination': {
+        'type': 'bank_account',
+        'bank_code': '000013',
+        'account_number': '0123456789',
+        'account_name': 'John Doe'
+    },
+    'narration': 'Salary payment'
+})
+
+signature = hmac.new(
+    secret_key.encode('utf-8'),
+    body.encode('utf-8'),
+    hashlib.sha512
+).hexdigest()
+```
+
+```php PHP
+$secretKey = 'sk_live_your_secret_key';
+$body = json_encode([
+    'amount' => 1000,
+    'currency' => 'NGN',
+    'destination' => [
+        'type' => 'bank_account',
+        'bank_code' => '000013',
+        'account_number' => '0123456789',
+        'account_name' => 'John Doe'
+    ],
+    'narration' => 'Salary payment'
+]);
+
+$signature = hash_hmac('sha512', $body, $secretKey);
+```
+</CodeGroup>
+
+---
+
+## Initiate a Payout
+
+Send money to a bank account or mobile money wallet.
+
+```
+POST /payouts
+```
+
+### Headers
+
+| Header | Type | Required | Description |
+|--------|------|----------|-------------|
+| `Authorization` | string | Yes | Your secret key (`sk_live_xxx` or `sk_test_xxx`) |
+| `X-Payout-Signature` | string | Yes | HMAC-SHA512 signature of the request body |
+| `Content-Type` | string | Yes | `application/json` |
+
+### Request Body
+
+<ParamField body="amount" type="number" required>
+  The amount to disburse (in the wallet's currency).
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  ISO 4217 currency code (e.g., `NGN`, `GHS`, `KES`). Must match a wallet you have.
+</ParamField>
+
+<ParamField body="destination" type="object" required>
+  The recipient details. Structure depends on `type`.
+</ParamField>
+
+<ParamField body="destination.type" type="string" required>
+  Either `bank_account` or `mobile_money`.
+</ParamField>
+
+<ParamField body="narration" type="string">
+  A description for the payout (max 200 characters).
+</ParamField>
+
+<ParamField body="reference" type="string">
+  Your unique idempotency key (max 50 characters). If provided, duplicate requests with the same reference will be rejected.
+</ParamField>
+
+### Bank Account Destination
+
+<ParamField body="destination.bank_code" type="string" required>
+  The bank's NIBSS code (e.g., `000013` for GTBank).
+</ParamField>
+
+<ParamField body="destination.account_number" type="string" required>
+  The recipient's account number.
+</ParamField>
+
+<ParamField body="destination.account_name" type="string" required>
+  The account holder's name.
+</ParamField>
+
+### Mobile Money Destination
+
+<ParamField body="destination.phone_number" type="string" required>
+  The mobile money phone number in E.164 format (e.g., `233501234567`).
+</ParamField>
+
+### Example — Bank Transfer
+
+```bash
+curl -X POST "https://api.rollapay.com/payouts" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "X-Payout-Signature: abc123..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 1000,
+    "currency": "NGN",
+    "destination": {
+      "type": "bank_account",
+      "bank_code": "000013",
+      "account_number": "0123456789",
+      "account_name": "John Doe"
+    },
+    "narration": "Salary payment",
+    "reference": "SAL_JAN_001"
+  }'
+```
+
+### Example — Mobile Money
+
+```bash
+curl -X POST "https://api.rollapay.com/payouts" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "X-Payout-Signature: abc123..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 50,
+    "currency": "GHS",
+    "destination": {
+      "type": "mobile_money",
+      "phone_number": "233501234567"
+    },
+    "narration": "Commission payout"
+  }'
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "message": "Payout initiated",
+  "data": {
+    "reference": "WDR_A1B2C3D4E5F6",
+    "merchant_reference": "SAL_JAN_001",
+    "amount": 1000,
+    "fee": 25,
+    "net_amount": 975,
+    "currency": "NGN",
+    "status": "pending",
+    "destination": {
+      "type": "bank_account",
+      "bank_code": "000013",
+      "account_number": "0123456789",
+      "account_name": "John Doe"
+    },
+    "created_at": "2026-07-26T19:00:00.000Z"
+  }
+}
+```
+
+---
+
+## Get Payout
+
+Retrieve the status and details of a specific payout.
+
+```
+GET /payouts/:reference
+```
+
+```bash
+curl -X GET "https://api.rollapay.com/payouts/WDR_A1B2C3D4E5F6" \
+  -H "Authorization: Bearer sk_live_your_secret_key"
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "message": "Payout retrieved",
+  "data": {
+    "reference": "WDR_A1B2C3D4E5F6",
+    "merchant_reference": "SAL_JAN_001",
+    "amount": 1000,
+    "fee": 25,
+    "net_amount": 975,
+    "currency": "NGN",
+    "status": "completed",
+    "destination": {
+      "type": "bank_account",
+      "bank_code": "000013",
+      "account_number": "0123456789",
+      "account_name": "John Doe"
+    },
+    "created_at": "2026-07-26T19:00:00.000Z",
+    "completed_at": "2026-07-26T19:02:15.000Z"
+  }
+}
+```
+
+---
+
+## List Payouts
+
+Retrieve a paginated list of payouts for your organization.
+
+```
+GET /payouts
+```
+
+<ParamField query="page" type="number" default="1">
+  Page number for pagination.
+</ParamField>
+
+<ParamField query="limit" type="number" default="20">
+  Number of payouts per page (max 100).
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by status: `pending`, `processing`, `completed`, `failed`.
+</ParamField>
+
+```bash
+curl -X GET "https://api.rollapay.com/payouts?page=1&limit=20&status=completed" \
+  -H "Authorization: Bearer sk_live_your_secret_key"
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "message": "Payouts retrieved",
+  "data": {
+    "payouts": [
+      {
+        "reference": "WDR_A1B2C3D4E5F6",
+        "amount": 1000,
+        "fee": 25,
+        "net_amount": 975,
+        "currency": "NGN",
+        "status": "completed",
+        "created_at": "2026-07-26T19:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "total": 42,
+      "page": 1,
+      "limit": 20,
+      "total_pages": 3
+    }
+  }
+}
+```
+
+---
+
+## Payout Statuses
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Payout has been created and wallet debited. Awaiting processor. |
+| `processing` | Payout is being processed by the payment processor. |
+| `completed` | Funds have been successfully transferred to the recipient. |
+| `failed` | Payout failed. Funds have been refunded to the wallet. |
+
+---
+
+## Webhooks
+
+When a payout completes or fails, Rolla Pay sends a webhook to your configured webhook URL.
+
+### `payout.completed`
+
+```json
+{
+  "event": "payout.completed",
+  "data": {
+    "reference": "WDR_A1B2C3D4E5F6",
+    "merchant_reference": "SAL_JAN_001",
+    "amount": 1000,
+    "fee": 25,
+    "net_amount": 975,
+    "currency": "NGN",
+    "status": "completed",
+    "destination_account_number": "0123456789",
+    "destination_bank_code": "000013",
+    "destination_account_name": "John Doe",
+    "completed_at": "2026-07-26T19:02:15.000Z"
+  }
+}
+```
+
+### `payout.failed`
+
+```json
+{
+  "event": "payout.failed",
+  "data": {
+    "reference": "WDR_A1B2C3D4E5F6",
+    "merchant_reference": "SAL_JAN_001",
+    "amount": 1000,
+    "fee": 25,
+    "currency": "NGN",
+    "status": "failed",
+    "failure_reason": "Account not found",
+    "failed_at": "2026-07-26T19:02:15.000Z"
+  }
+}
+```
+
+<Note>
+Always verify the webhook signature using your webhook secret before updating any records. See the [Webhooks](/api-reference/webhooks) guide for details.
+</Note>
+
+---
+
+## Error Codes
+
+| HTTP | Message | Description |
+|------|---------|-------------|
+| 400 | Invalid payout signature | The `X-Payout-Signature` header does not match the request body. |
+| 400 | Insufficient wallet balance | The wallet does not have enough funds for the payout + fee. |
+| 400 | Wallet currency not found | No wallet exists for the specified currency. |
+| 400 | Duplicate payout reference | A payout with this `reference` already exists. |
+| 401 | Authentication required | Missing or invalid secret key. |
+| 429 | Too many payout attempts | Rate limit exceeded (max 5 per hour per wallet). |

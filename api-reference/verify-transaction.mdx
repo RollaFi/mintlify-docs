@@ -91,7 +91,7 @@ Authorization: Bearer sk_live_your_secret_key
       Currency code (e.g., `NGN`, `USD`, `GBP`)
     </ResponseField>
     <ResponseField name="channel" type="string">
-      Payment channel used: `card`, `bank_transfer`, `ussd`
+      Payment channel used: `card`, `bank_transfer`, `mobile_money`, `ussd`
     </ResponseField>
     <ResponseField name="fees" type="number">
       Fee charged for the transaction
@@ -142,11 +142,40 @@ Authorization: Bearer sk_live_your_secret_key
         <ResponseField name="type" type="string">
           Payment type: `bank_transfer`
         </ResponseField>
-        <ResponseField name="bank_code" type="string">
-          Bank code
+        <ResponseField name="account_number" type="string">
+          Virtual account number the customer transferred to
+        </ResponseField>
+        <ResponseField name="account_name" type="string">
+          Name on the virtual account
         </ResponseField>
         <ResponseField name="bank_name" type="string">
-          Bank name
+          Bank of the virtual account (e.g., "NET Microfinance Bank")
+        </ResponseField>
+        <ResponseField name="sender_name" type="string">
+          Name of the person who sent the transfer
+        </ResponseField>
+        <ResponseField name="sender_account_number" type="string">
+          Account number the transfer was sent from
+        </ResponseField>
+        <ResponseField name="sender_bank" type="string">
+          Bank the transfer was sent from (e.g., "GTBank Plc")
+        </ResponseField>
+      </Expandable>
+      <Expandable title="Mobile money properties">
+        <ResponseField name="type" type="string">
+          Payment type: `mobile_money`
+        </ResponseField>
+        <ResponseField name="phone" type="string">
+          Phone number used for payment
+        </ResponseField>
+        <ResponseField name="provider" type="string">
+          Mobile money provider (e.g., "MTN", "Vodafone")
+        </ResponseField>
+        <ResponseField name="sender_name" type="string">
+          Name of the sender
+        </ResponseField>
+        <ResponseField name="sender_phone" type="string">
+          Phone number of the sender
         </ResponseField>
       </Expandable>
     </ResponseField>
@@ -352,28 +381,32 @@ if ($result['success'] && $result['data']['status'] === 'successful') {
     "id": "550e8400-e29b-41d4-a716-446655440001",
     "reference": "TXN_hHcFFwL36fWhnhsg",
     "status": "successful",
-    "amount": 500000,
+    "amount": 5000,
     "currency": "NGN",
     "channel": "bank_transfer",
-    "fees": 5000,
-    "net_amount": 495000,
+    "fees": 50,
+    "net_amount": 4950,
     "customer": {
       "email": "customer@example.com",
       "name": "John Doe",
-      "phone": null
+      "phone": "08012345678"
     },
     "payment_source": {
       "type": "bank_transfer",
-      "bank_code": "058",
-      "bank_name": "GTBank"
+      "account_number": "9002389673",
+      "account_name": "Rolla Pay",
+      "bank_name": "NET Microfinance Bank",
+      "sender_name": "AMOS ORUAROGHENE",
+      "sender_account_number": "0107629596",
+      "sender_bank": "GTBank Plc"
     },
-    "description": "Invoice #456",
+    "description": null,
     "metadata": {
       "order_id": "ORD-456"
     },
-    "gateway_response": "Approved",
-    "created_at": "2026-02-28T15:15:00.000Z",
-    "paid_at": "2026-02-28T15:20:33.891Z",
+    "gateway_response": "APPROVED",
+    "created_at": "2026-07-22T19:00:00.000Z",
+    "paid_at": "2026-07-22T19:03:33.891Z",
     "failed_at": null,
     "failure_reason": null
   }

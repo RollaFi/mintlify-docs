@@ -58,6 +58,10 @@
                 ]
               },
               {
+                "group": "Payouts",
+                "pages": ["api-reference/payouts"]
+              },
+              {
                 "group": "Webhooks",
                 "pages": ["api-reference/webhooks"]
               },

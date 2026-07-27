@@ -6,10 +6,11 @@ description: 'Process a payment directly with card details from your server'
 
 ## Overview
 
-The Direct Payment API lets you charge a card directly from your server. You collect the card details and send them in the request — giving you full control over the payment experience.
+The Direct Payment API lets you process payments directly from your server. Depending on the channel, you can charge a card, initiate a bank transfer (virtual account), or accept mobile money.
 
 **Use this when:**
 - You have your own payment form and collect card details yourself
+- You want to generate a virtual account for bank transfer payments
 - You need full control over the checkout UI
 - You're building a mobile app or custom integration
 
@@ -44,7 +45,7 @@ Authorization: Bearer sk_live_your_secret_key
 </ParamField>
 
 <ParamField body="channel" type="string" required>
-  Payment channel: `card`, `bank_transfer`, or `ussd`
+  Payment channel: `card`, `bank_transfer`, `mobile_money`, or `ussd`
 </ParamField>
 
 <ParamField body="customer" type="object" required>
@@ -135,7 +136,25 @@ Authorization: Bearer sk_live_your_secret_key
       Transaction status: `pending`, `requires_action`, `processing`, `successful`, `failed`
     </ResponseField>
     <ResponseField name="payment_url" type="string">
-      URL to redirect the customer for payment authentication (3D Secure, etc.). `null` if no redirect is required.
+      URL to redirect the customer for payment authentication (3D Secure, etc.). Only present for card payments that require redirect.
+    </ResponseField>
+    <ResponseField name="account_number" type="string">
+      Virtual account number for bank transfer payments. Customer transfers to this account.
+    </ResponseField>
+    <ResponseField name="bank_name" type="string">
+      Bank name for the virtual account (e.g., "NET Microfinance Bank").
+    </ResponseField>
+    <ResponseField name="account_name" type="string">
+      Account name for the virtual account.
+    </ResponseField>
+    <ResponseField name="account_type" type="string">
+      Type of virtual account: `dynamic` (expires after timeout).
+    </ResponseField>
+    <ResponseField name="amount" type="number">
+      Amount to transfer (for bank transfer channel).
+    </ResponseField>
+    <ResponseField name="expires_at" type="string">
+      ISO 8601 timestamp when the virtual account expires (e.g., `2026-07-23T12:30:00.000Z`).
     </ResponseField>
     <ResponseField name="next_action" type="string">
       Indicates the next action required when `status` is `requires_action`. Possible values: `redirect` (redirect to payment_url), `otp` (submit OTP), `pin` (submit PIN)
@@ -147,7 +166,7 @@ Authorization: Bearer sk_live_your_secret_key
 </ResponseField>
 
 <RequestExample>
-```bash cURL
+```bash Card Payment
 curl -X POST "https://api.rollapay.com/transaction/initiate" \
   -H "Authorization: Bearer sk_live_your_secret_key" \
   -H "Content-Type: application/json" \
@@ -178,6 +197,26 @@ curl -X POST "https://api.rollapay.com/transaction/initiate" \
       "city": "Lagos",
       "country": "NG",
       "postalCode": "100001"
+    }
+  }'
+```
+
+```bash Bank Transfer
+curl -X POST "https://api.rollapay.com/transaction/initiate" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 5000,
+    "currency": "NGN",
+    "channel": "bank_transfer",
+    "customer": {
+      "email": "customer@example.com",
+      "name": "John Doe",
+      "phone": "08012345678"
+    },
+    "callbackUrl": "https://yoursite.com/callback",
+    "metadata": {
+      "orderId": "ORD-456"
     }
   }'
 ```
@@ -336,8 +375,24 @@ $result = json_decode($response, true);
   "message": "Transaction initiated",
   "data": {
     "reference": "TXN_hHcFFwL36fWhnhsg",
-    "status": "successful",
-    "payment_url": null
+    "status": "successful"
+  }
+}
+```
+
+```json 200 Bank Transfer (Virtual Account)
+{
+  "success": true,
+  "message": "Virtual account created successfully",
+  "data": {
+    "reference": "TXN_d7WblCDVuoqiQAMB",
+    "status": "pending",
+    "account_number": "9002389673",
+    "bank_name": "NET Microfinance Bank",
+    "account_name": "Rolla Pay",
+    "account_type": "dynamic",
+    "amount": 5000,
+    "expires_at": "2026-07-23T12:30:00.000Z"
   }
 }
 ```
@@ -421,25 +476,37 @@ Use these test cards with your `sk_test_*` API key in sandbox mode:
 
 ## Next Steps
 
-After initiating a payment, check the `status` and `next_action` fields:
+After initiating a payment, check the `status` and `channel` to determine the next step:
 
-### If `next_action` is `redirect`
+### Card Payment — `next_action` is `redirect`
 1. Redirect the customer to `payment_url`
 2. The customer completes authentication (3D Secure, etc.)
 3. Customer is redirected back to your `callbackUrl`
 4. Use the [Verify Transaction](/api-reference/verify-transaction) endpoint to confirm the final status
 
-### If `status` is `successful`
+### Card Payment — `status` is `successful`
 The transaction completed immediately without additional authentication.
 1. Use the [Verify Transaction](/api-reference/verify-transaction) endpoint to confirm the final status
 
-### If `next_action` is `otp`
+### Card Payment — `next_action` is `otp`
 1. Display an OTP input form to the customer
 2. Submit the OTP using the Submit OTP endpoint *(coming soon)*
 3. Use the [Verify Transaction](/api-reference/verify-transaction) endpoint to confirm the final status
 
-### If `next_action` is `pin`
+### Card Payment — `next_action` is `pin`
 1. Display a PIN input form to the customer
 2. Submit the PIN using the Submit PIN endpoint *(coming soon)*
-3. The response may return another `next_action` (e.g., `otp`) - handle accordingly
+3. The response may return another `next_action` (e.g., `otp`) — handle accordingly
 4. Use the [Verify Transaction](/api-reference/verify-transaction) endpoint to confirm the final status
+
+### Bank Transfer — `status` is `pending`
+1. Display the virtual account details to the customer: `account_number`, `bank_name`, `account_name`, and `amount`
+2. Show the expiry countdown using `expires_at` — the account is only valid until this time
+3. The customer transfers the exact amount from their bank app to the virtual account
+4. Poll the [Verify Transaction](/api-reference/verify-transaction) endpoint every 3–5 seconds to check for payment confirmation
+5. Once `status` changes to `successful`, the payment is complete
+6. You will also receive a [webhook](/api-reference/webhooks) notification when the payment is confirmed
+
+<Warning>
+  Bank transfer virtual accounts expire after 30 minutes by default. If the customer does not transfer within this window, the transaction will expire and a new one must be initiated.
+</Warning>

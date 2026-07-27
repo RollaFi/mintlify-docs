@@ -6,7 +6,9 @@ description: 'Create a hosted checkout session — no card details needed. Custo
 
 ## Overview
 
-The Checkout API lets you accept payments without handling card details on your server. You create a checkout session with the amount and customer info, and we return a secure checkout URL. The customer completes payment on our hosted page, and we redirect them back to your site.
+The Checkout API lets you accept payments without handling card details on your server. You create a checkout session with the amount and customer info, and we return a secure checkout URL. The customer completes payment on our hosted page — which supports **card and bank transfer** — and we redirect them back to your site.
+
+The hosted checkout page automatically shows the available payment methods based on the merchant's currency configuration. No code changes are needed from your side — the checkout URL handles it.
 
 **Use this when:**
 - You don't want to handle card details (simplifies PCI compliance)

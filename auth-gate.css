@@ -1,10 +1,9 @@
-/* Hide all page content until authenticated */
-body:not(.rolla-authenticated) {
+/* AUTH GATE COMMENTED OUT */
+/* body:not(.rolla-authenticated) {
   visibility: hidden !important;
   overflow: hidden !important;
-}
+} */
 
-/* Keep the auth overlay visible */
-#rolla-auth-overlay {
+/* #rolla-auth-overlay {
   visibility: visible !important;
-}
+} */
