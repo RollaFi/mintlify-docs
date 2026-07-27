@@ -21,13 +21,9 @@ Rolla Pay Payouts lets you disburse funds from your wallet to any recipient — 
 | Bank Transfer | NGN | Send to any Nigerian bank account via NIP |
 | Mobile Money | GHS, KES, ZMW | Send to mobile money wallets |
 
-## Security
+## Authentication
 
-All payout requests require **HMAC-SHA512 signature verification**. You sign the request body with your secret key and include the signature in the `X-Payout-Signature` header. This ensures the request hasn't been tampered with.
-
-```
-Signature = HMAC-SHA512(request_body, secret_key)
-```
+All payout requests require your **secret API key** in the Authorization header. Use `sk_test_*` for testing and `sk_live_*` for production.
 
 ## Payout Lifecycle
 
@@ -46,7 +42,6 @@ stateDiagram-v2
 ```bash
 curl -X POST "https://api.rollapay.com/payouts" \
   -H "Authorization: Bearer sk_live_your_secret_key" \
-  -H "X-Payout-Signature: your_hmac_signature" \
   -H "Content-Type: application/json" \
   -d '{
     "amount": 1000,

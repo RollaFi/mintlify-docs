@@ -1,6 +1,6 @@
 ---
 title: 'Verify Payout'
-api: 'GET https://api.rollapay.com/payouts/{reference}'
+api: 'GET https://api.rollapay.com/payout/verify/{reference}'
 description: 'Check the status of a payout'
 ---
 
@@ -26,12 +26,12 @@ No signature is required for GET requests — only the secret key.
 
 <RequestExample>
 ```bash cURL
-curl -X GET "https://api.rollapay.com/payouts/WDR_A1B2C3D4E5F6" \
+curl -X GET "https://api.rollapay.com/payout/verify/WDR_A1B2C3D4E5F6" \
   -H "Authorization: Bearer sk_live_your_secret_key"
 ```
 
 ```javascript Node.js
-const response = await fetch('https://api.rollapay.com/payouts/WDR_A1B2C3D4E5F6', {
+const response = await fetch('https://api.rollapay.com/payout/verify/WDR_A1B2C3D4E5F6', {
   headers: {
     'Authorization': 'Bearer sk_live_your_secret_key',
   },
@@ -44,7 +44,7 @@ const data = await response.json();
 import requests
 
 response = requests.get(
-    'https://api.rollapay.com/payouts/WDR_A1B2C3D4E5F6',
+    'https://api.rollapay.com/payout/verify/WDR_A1B2C3D4E5F6',
     headers={
         'Authorization': 'Bearer sk_live_your_secret_key',
     }
@@ -56,7 +56,7 @@ data = response.json()
 ```php PHP
 <?php
 
-$ch = curl_init('https://api.rollapay.com/payouts/WDR_A1B2C3D4E5F6');
+$ch = curl_init('https://api.rollapay.com/payout/verify/WDR_A1B2C3D4E5F6');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Authorization: Bearer sk_live_your_secret_key',

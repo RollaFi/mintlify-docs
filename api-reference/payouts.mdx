@@ -15,9 +15,8 @@ sequenceDiagram
     participant R as Rolla Pay API
     participant P as Processor
 
-    M->>M: Generate HMAC-SHA512 signature
-    M->>R: POST /payouts (with X-Payout-Signature)
-    R->>R: Verify signature
+    M->>R: POST /payout/initiate
+    R->>R: Authenticate & validate
     R->>R: Debit wallet
     R->>P: Process transfer
     P-->>R: Transfer result
@@ -35,81 +34,17 @@ sequenceDiagram
   </Card>
 </CardGroup>
 
-## Security
+## Authentication
 
-Payout requests require **HMAC-SHA512 signature verification** in addition to your secret key. This ensures the request body has not been tampered with.
+All payout requests require your secret API key in the `Authorization` header:
 
-### Generating the Signature
-
-Compute `HMAC-SHA512` of the JSON request body using your **secret key** as the signing key, and send it in the `X-Payout-Signature` header.
-
-<CodeGroup>
-```javascript Node.js
-const crypto = require('crypto');
-
-const secretKey = 'sk_live_your_secret_key';
-const body = JSON.stringify({
-  amount: 1000,
-  currency: 'NGN',
-  destination: {
-    type: 'bank_account',
-    bank_code: '000013',
-    account_number: '0123456789',
-    account_name: 'John Doe'
-  },
-  narration: 'Salary payment'
-});
-
-const signature = crypto
-  .createHmac('sha512', secretKey)
-  .update(body)
-  .digest('hex');
-
-// Send as: X-Payout-Signature: <signature>
+```
+Authorization: Bearer sk_live_your_secret_key
 ```
 
-```python Python
-import hmac
-import hashlib
-import json
-
-secret_key = 'sk_live_your_secret_key'
-body = json.dumps({
-    'amount': 1000,
-    'currency': 'NGN',
-    'destination': {
-        'type': 'bank_account',
-        'bank_code': '000013',
-        'account_number': '0123456789',
-        'account_name': 'John Doe'
-    },
-    'narration': 'Salary payment'
-})
-
-signature = hmac.new(
-    secret_key.encode('utf-8'),
-    body.encode('utf-8'),
-    hashlib.sha512
-).hexdigest()
-```
-
-```php PHP
-$secretKey = 'sk_live_your_secret_key';
-$body = json_encode([
-    'amount' => 1000,
-    'currency' => 'NGN',
-    'destination' => [
-        'type' => 'bank_account',
-        'bank_code' => '000013',
-        'account_number' => '0123456789',
-        'account_name' => 'John Doe'
-    ],
-    'narration' => 'Salary payment'
-]);
-
-$signature = hash_hmac('sha512', $body, $secretKey);
-```
-</CodeGroup>
+<Note>
+Use `sk_test_*` keys for testing and `sk_live_*` keys for production.
+</Note>
 
 ## Payout Statuses
 
@@ -171,7 +106,6 @@ Always verify the webhook signature using your webhook secret before updating an
 
 | HTTP | Message | Description |
 |------|---------|-------------|
-| 400 | Invalid payout signature | The `X-Payout-Signature` header does not match the request body. |
 | 400 | Insufficient wallet balance | The wallet does not have enough funds for the payout + fee. |
 | 400 | Wallet currency not found | No wallet exists for the specified currency. |
 | 400 | Duplicate payout reference | A payout with this `reference` already exists. |
