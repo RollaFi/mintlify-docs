@@ -30,7 +30,7 @@ Initiate a payout to disburse funds from your Rolla Pay wallet to any recipient.
 </ParamField>
 
 <ParamField body="destination.type" type="string" required>
-  Either `bank_account` or `mobile_money`.
+  Either `bank_transfer` or `mobile_money`.
 </ParamField>
 
 <ParamField body="narration" type="string">
@@ -43,7 +43,7 @@ Initiate a payout to disburse funds from your Rolla Pay wallet to any recipient.
 
 ## Bank Account Destination
 
-Use `destination.type: "bank_account"` to send to a bank account.
+Use `destination.type: "bank_transfer"` to send to a bank account.
 
 <ParamField body="destination.bank_code" type="string" required>
   The bank's NIBSS code (e.g., `000013` for GTBank).
@@ -68,7 +68,7 @@ curl -X POST "https://api.rollapay.com/payout/initiate" \
     "amount": 1000,
     "currency": "NGN",
     "destination": {
-      "type": "bank_account",
+      "type": "bank_transfer",
       "bank_code": "000013",
       "account_number": "0123456789",
       "account_name": "John Doe"
@@ -86,7 +86,7 @@ const body = JSON.stringify({
   amount: 1000,
   currency: 'NGN',
   destination: {
-    type: 'bank_account',
+    type: 'bank_transfer',
     bank_code: '000013',
     account_number: '0123456789',
     account_name: 'John Doe'
@@ -115,7 +115,7 @@ body = json.dumps({
     'amount': 1000,
     'currency': 'NGN',
     'destination': {
-        'type': 'bank_account',
+        'type': 'bank_transfer',
         'bank_code': '000013',
         'account_number': '0123456789',
         'account_name': 'John Doe'
@@ -135,7 +135,7 @@ data = response.json()
 $secretKey = 'sk_live_your_secret_key';
 $body = json_encode([
     'amount' => 1000, 'currency' => 'NGN',
-    'destination' => ['type' => 'bank_account', 'bank_code' => '000013', 'account_number' => '0123456789', 'account_name' => 'John Doe'],
+    'destination' => ['type' => 'bank_transfer', 'bank_code' => '000013', 'account_number' => '0123456789', 'account_name' => 'John Doe'],
     'narration' => 'Salary payment', 'reference' => 'SAL_JAN_001'
 ]);
 $ch = curl_init('https://api.rollapay.com/payout/initiate');
