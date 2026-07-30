@@ -6,7 +6,20 @@ description: 'Send money to a bank account or mobile money wallet'
 
 ## Overview
 
-Initiate a payout to disburse funds from your Rolla Pay wallet to any recipient. Supports bank transfers (NGN) and mobile money (GHS, KES, ZMW).
+Initiate a payout to disburse funds from your Rolla Pay wallet. One endpoint serves both methods; the `destination` object decides which.
+
+The two differ in more than their fields, so each has its own page:
+
+<CardGroup cols={2}>
+  <Card title="Bank Transfer Payout" icon="building-columns" href="/api-reference/bank-transfer-payout">
+    **NGN.** Three steps — list banks, resolve the account, then pay. Requires a `name_enquiry_ref`.
+  </Card>
+  <Card title="Mobile Money Payout" icon="mobile" href="/api-reference/mobile-money-payout">
+    **GHS, KES, ZMW.** A single call. The phone number is the identity, so there is nothing to resolve.
+  </Card>
+</CardGroup>
+
+This page documents what both share.
 
 ## Authentication
 
@@ -15,18 +28,20 @@ Initiate a payout to disburse funds from your Rolla Pay wallet to any recipient.
 | `Authorization` | string | Yes | Your secret key (`sk_live_xxx`) |
 | `Content-Type` | string | Yes | `application/json` |
 
-## Request Body — Common Parameters
+## Common Parameters
 
 <ParamField body="amount" type="number" required>
-  The amount to disburse (in the wallet's currency).
+  The amount the recipient receives, in major units of the wallet's currency (e.g. `1000` means ₦1,000, not 1,000 kobo).
+
+  By default the payout fee is charged on top of this, so your wallet is debited `amount + fee`. Use `fee_source: "amount"` to deduct the fee from the payout instead.
 </ParamField>
 
 <ParamField body="currency" type="string" required>
-  ISO 4217 currency code (e.g., `NGN`, `GHS`, `KES`). Must match a wallet you have.
+  ISO 4217 currency code. Must match a wallet you have, and the method: `NGN` for bank transfers, `GHS` / `KES` / `ZMW` for mobile money.
 </ParamField>
 
 <ParamField body="destination" type="object" required>
-  The recipient details. Structure depends on `type`.
+  The recipient. Its shape depends on `destination.type` — see [Bank Transfer](/api-reference/bank-transfer-payout) or [Mobile Money](/api-reference/mobile-money-payout).
 </ParamField>
 
 <ParamField body="destination.type" type="string" required>
@@ -38,206 +53,20 @@ Initiate a payout to disburse funds from your Rolla Pay wallet to any recipient.
 </ParamField>
 
 <ParamField body="reference" type="string">
-  Your unique idempotency key (max 50 characters). If provided, duplicate requests with the same reference will be rejected.
+  Your unique idempotency key (max 50 characters). If provided, a retry with the same reference returns the original payout instead of creating a second one.
 </ParamField>
 
-## Bank Account Destination
+<ParamField body="fee_source" type="string" default="balance">
+  Who absorbs the payout fee.
 
-Use `destination.type: "bank_transfer"` to send to a bank account.
+  - `balance` (default) — the fee is charged on top. Your wallet is debited `amount + fee`, the recipient receives exactly `amount`.
+  - `amount` — the fee comes out of the payout. Your wallet is debited `amount`, the recipient receives `amount - fee`.
 
-<ParamField body="destination.bank_code" type="string" required>
-  The bank's NIBSS code (e.g., `000013` for GTBank).
-</ParamField>
+  With `amount`, any payout at or below the fee is rejected, because the recipient would receive nothing.
 
-<ParamField body="destination.account_number" type="string" required>
-  The recipient's account number.
-</ParamField>
-
-<ParamField body="destination.account_name" type="string" required>
-  The account holder's name.
-</ParamField>
-
-### Bank Transfer Examples
-
-<CodeGroup>
-```bash cURL
-curl -X POST "https://api.rollapay.com/payout/initiate" \
-  -H "Authorization: Bearer sk_live_your_secret_key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 1000,
-    "currency": "NGN",
-    "destination": {
-      "type": "bank_transfer",
-      "bank_code": "000013",
-      "account_number": "0123456789",
-      "account_name": "John Doe"
-    },
-    "narration": "Salary payment",
-    "reference": "SAL_JAN_001"
-  }'
-```
-
-```javascript Node.js
-const crypto = require('crypto');
-
-const secretKey = 'sk_live_your_secret_key';
-const body = JSON.stringify({
-  amount: 1000,
-  currency: 'NGN',
-  destination: {
-    type: 'bank_transfer',
-    bank_code: '000013',
-    account_number: '0123456789',
-    account_name: 'John Doe'
-  },
-  narration: 'Salary payment',
-  reference: 'SAL_JAN_001'
-});
-
-const response = await fetch('https://api.rollapay.com/payout/initiate', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${secretKey}`,
-    'Content-Type': 'application/json',
-  },
-  body,
-});
-
-const data = await response.json();
-```
-
-```python Python
-import hmac, hashlib, json, requests
-
-secret_key = 'sk_live_your_secret_key'
-body = json.dumps({
-    'amount': 1000,
-    'currency': 'NGN',
-    'destination': {
-        'type': 'bank_transfer',
-        'bank_code': '000013',
-        'account_number': '0123456789',
-        'account_name': 'John Doe'
-    },
-    'narration': 'Salary payment',
-    'reference': 'SAL_JAN_001'
-})
-
-response = requests.post('https://api.rollapay.com/payout/initiate',
-    headers={'Authorization': f'Bearer {secret_key}', 'Content-Type': 'application/json'},
-    data=body)
-data = response.json()
-```
-
-```php PHP
-<?php
-$secretKey = 'sk_live_your_secret_key';
-$body = json_encode([
-    'amount' => 1000, 'currency' => 'NGN',
-    'destination' => ['type' => 'bank_transfer', 'bank_code' => '000013', 'account_number' => '0123456789', 'account_name' => 'John Doe'],
-    'narration' => 'Salary payment', 'reference' => 'SAL_JAN_001'
-]);
-$ch = curl_init('https://api.rollapay.com/payout/initiate');
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer $secretKey", 'Content-Type: application/json']);
-$response = curl_exec($ch);
-curl_close($ch);
-$result = json_decode($response, true);
-```
-</CodeGroup>
-
-### Mobile Money Examples
-
-<CodeGroup>
-```bash cURL
-curl -X POST "https://api.rollapay.com/payout/initiate" \
-  -H "Authorization: Bearer sk_live_your_secret_key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 50,
-    "currency": "GHS",
-    "destination": {
-      "type": "mobile_money",
-      "phone_number": "233501234567"
-    },
-    "narration": "Commission payout"
-  }'
-```
-
-```javascript Node.js
-const crypto = require('crypto');
-
-const secretKey = 'sk_live_your_secret_key';
-const body = JSON.stringify({
-  amount: 50,
-  currency: 'GHS',
-  destination: {
-    type: 'mobile_money',
-    phone_number: '233501234567'
-  },
-  narration: 'Commission payout'
-});
-
-const response = await fetch('https://api.rollapay.com/payout/initiate', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${secretKey}`,
-    'Content-Type': 'application/json',
-  },
-  body,
-});
-
-const data = await response.json();
-```
-
-```python Python
-import hmac, hashlib, json, requests
-
-secret_key = 'sk_live_your_secret_key'
-body = json.dumps({
-    'amount': 50,
-    'currency': 'GHS',
-    'destination': {
-        'type': 'mobile_money',
-        'phone_number': '233501234567'
-    },
-    'narration': 'Commission payout'
-})
-
-response = requests.post('https://api.rollapay.com/payout/initiate',
-    headers={'Authorization': f'Bearer {secret_key}', 'Content-Type': 'application/json'},
-    data=body)
-data = response.json()
-```
-
-```php PHP
-<?php
-$secretKey = 'sk_live_your_secret_key';
-$body = json_encode([
-    'amount' => 50, 'currency' => 'GHS',
-    'destination' => ['type' => 'mobile_money', 'phone_number' => '233501234567'],
-    'narration' => 'Commission payout'
-]);
-$ch = curl_init('https://api.rollapay.com/payout/initiate');
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer $secretKey", 'Content-Type: application/json']);
-$response = curl_exec($ch);
-curl_close($ch);
-$result = json_decode($response, true);
-```
-</CodeGroup>
-
-## Mobile Money Destination
-
-Use `destination.type: "mobile_money"` to send to a mobile money wallet. Available for GHS, KES, and ZMW currencies.
-
-<ParamField body="destination.phone_number" type="string" required>
-  The mobile money phone number in E.164 format (e.g., `233501234567`).
+  <Warning>
+    The default changed from `amount` to `balance`. Integrations that relied on the fee being deducted from the payout must now pass `fee_source: "amount"` explicitly — otherwise the same request debits `amount + fee` from your wallet and the recipient receives more than before.
+  </Warning>
 </ParamField>
 
 ## Response
@@ -253,25 +82,28 @@ Use `destination.type: "mobile_money"` to send to a mobile money wallet. Availab
 <ResponseField name="data" type="object">
   <Expandable title="properties">
     <ResponseField name="reference" type="string">
-      Rolla Pay payout reference (e.g., `WDR_A1B2C3D4E5F6`).
+      Rolla Pay payout reference (e.g. `PAYOUT-RP-1785413925129-40HC3YFOIE`).
     </ResponseField>
     <ResponseField name="merchant_reference" type="string">
       Your custom reference, if provided.
     </ResponseField>
     <ResponseField name="amount" type="number">
-      The payout amount.
+      What leaves your wallet. Under `fee_source: "balance"` this is the requested amount plus the fee.
     </ResponseField>
     <ResponseField name="fee" type="number">
       The payout fee charged.
     </ResponseField>
     <ResponseField name="net_amount" type="number">
-      Amount after fee deduction (amount sent to recipient).
+      What the recipient receives.
     </ResponseField>
     <ResponseField name="currency" type="string">
       Currency code.
     </ResponseField>
     <ResponseField name="status" type="string">
       Payout status: `pending`, `processing`, `completed`, `failed`.
+    </ResponseField>
+    <ResponseField name="fee_source" type="string">
+      Which fee mode was applied.
     </ResponseField>
     <ResponseField name="created_at" type="string">
       ISO 8601 timestamp.
@@ -285,14 +117,15 @@ Use `destination.type: "mobile_money"` to send to a mobile money wallet. Availab
   "success": true,
   "message": "Payout initiated",
   "data": {
-    "reference": "WDR_A1B2C3D4E5F6",
+    "reference": "PAYOUT-RP-1785413925129-40HC3YFOIE",
     "merchant_reference": "SAL_JAN_001",
-    "amount": 1000,
-    "fee": 25,
-    "net_amount": 975,
+    "amount": 1020,
+    "fee": 20,
+    "net_amount": 1000,
     "currency": "NGN",
     "status": "pending",
-    "created_at": "2026-07-26T19:00:00.000Z"
+    "fee_source": "balance",
+    "created_at": "2026-07-30T12:00:00.000Z"
   }
 }
 ```
@@ -304,17 +137,17 @@ Use `destination.type: "mobile_money"` to send to a mobile money wallet. Availab
 }
 ```
 
-```json 400 Invalid Signature
+```json 400 Amount Below Fee
 {
   "success": false,
-  "message": "Invalid payout signature"
+  "message": "Payout amount 20 NGN must exceed the 20 NGN payout fee"
 }
 ```
 
-```json 400 Duplicate Reference
+```json 400 Missing Name Enquiry
 {
   "success": false,
-  "message": "Duplicate payout reference"
+  "message": "destination.name_enquiry_ref: Required"
 }
 ```
 </ResponseExample>
@@ -326,4 +159,4 @@ After initiating a payout:
 1. The payout status starts as `pending` and moves to `processing` once sent to the processor.
 2. You will receive a [webhook](/api-reference/webhooks) notification (`payout.completed` or `payout.failed`) when the payout is finalized.
 3. You can also poll the [Verify Payout](/api-reference/verify-payout) endpoint to check the status.
-4. If a payout fails, funds are automatically refunded to your wallet.
+4. If a payout fails, funds are automatically credited back to your wallet.

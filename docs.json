@@ -55,7 +55,7 @@
                 "pages": ["api-reference/introduction"]
               },
               {
-                "group": "Payments",
+                "group": "Payins",
                 "pages": [
                   "api-reference/test-cards",
                   "api-reference/initiate-payment",
@@ -72,7 +72,11 @@
                 "group": "Payouts",
                 "pages": [
                   "api-reference/payouts",
+                  "api-reference/banks",
+                  "api-reference/name-enquiry",
                   "api-reference/initiate-payout",
+                  "api-reference/bank-transfer-payout",
+                  "api-reference/mobile-money-payout",
                   "api-reference/verify-payout"
                 ]
               },

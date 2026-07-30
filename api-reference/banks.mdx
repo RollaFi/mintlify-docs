@@ -1,0 +1,125 @@
+---
+title: 'Banks'
+api: 'GET https://api.rollapay.com/payout/banks'
+description: 'Banks you can pay out to, with their NIBSS codes'
+---
+
+## Overview
+
+Returns the banks payable for a currency, with the code that [name enquiry](/api-reference/name-enquiry) and [payouts](/api-reference/initiate-payout) expect as `bank_code`.
+
+Use this to populate a bank picker rather than hardcoding codes — the list changes as banks are added, merge, or are decommissioned.
+
+<Note>
+  Bank payouts are **NGN only**. The list is NIBSS, a Nigerian scheme. GHS, KES and ZMW pay out to mobile money, where the phone number is the identity and there is no bank to look up — for those, use `destination.type: "mobile_money"` and skip both this endpoint and name enquiry.
+</Note>
+
+## Authentication
+
+| Header | Type | Required | Description |
+|--------|------|----------|-------------|
+| `Authorization` | string | Yes | Your secret key (`sk_live_xxx`) |
+
+Because this needs your secret key, call it from your backend and cache the result — never from a browser or mobile app.
+
+## Query Parameters
+
+<ParamField query="currency" type="string" default="NGN">
+  ISO 4217 currency code. Any currency that does not pay out to bank accounts returns `400` naming the ones that do, rather than an empty list — an empty list reads as "no banks today" and sends you hunting for a configuration problem that does not exist.
+</ParamField>
+
+## Response
+
+<ResponseField name="currency" type="string">
+  The currency the list applies to.
+</ResponseField>
+
+<ResponseField name="banks" type="array">
+  Banks, sorted by name and deduplicated by NIBSS code.
+
+  <Expandable title="Bank">
+    <ResponseField name="bankName" type="string">
+      Display name, e.g. `Guaranty Trust Bank`.
+    </ResponseField>
+
+    <ResponseField name="bankCode" type="string">
+      The NIBSS code. **This is the `bank_code` you send** to name enquiry and payouts.
+    </ResponseField>
+
+    <ResponseField name="institutionCode" type="string">
+      The processor-side institution identifier. Informational — you do not send this.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.rollapay.com/payout/banks?currency=NGN" \
+  -H "Authorization: Bearer sk_live_your_secret_key"
+```
+
+```javascript Node.js
+const response = await fetch('https://api.rollapay.com/payout/banks?currency=NGN', {
+  headers: { 'Authorization': `Bearer ${secretKey}` },
+});
+const { data } = await response.json();
+
+// Populate a picker; send bank.bankCode as bank_code
+const options = data.banks.map((bank) => ({
+  label: bank.bankName,
+  value: bank.bankCode,
+}));
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://api.rollapay.com/payout/banks',
+    params={'currency': 'NGN'},
+    headers={'Authorization': f'Bearer {secret_key}'},
+)
+banks = response.json()['data']['banks']
+by_code = {bank['bankCode']: bank['bankName'] for bank in banks}
+```
+</CodeGroup>
+
+```json Response
+{
+  "success": true,
+  "message": "Banks retrieved",
+  "data": {
+    "currency": "NGN",
+    "banks": [
+      {
+        "bankName": "Access Bank",
+        "bankCode": "000014",
+        "institutionCode": "044"
+      },
+      {
+        "bankName": "Guaranty Trust Bank",
+        "bankCode": "000013",
+        "institutionCode": "058"
+      },
+      {
+        "bankName": "Zenith Bank",
+        "bankCode": "000015",
+        "institutionCode": "057"
+      }
+    ]
+  }
+}
+```
+
+## Errors
+
+| Message | Meaning |
+|---------|---------|
+| `GHS payouts do not go to bank accounts — use destination.type "mobile_money"` | That currency pays out to mobile money. No bank list applies. |
+| `currency must be a 3-letter ISO 4217 code` | Malformed `currency`. |
+
+<Warning>
+  Do not use `bankName` to identify a bank. Names change and several banks have similar ones — match on `bankCode`.
+</Warning>

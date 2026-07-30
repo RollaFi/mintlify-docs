@@ -1,0 +1,140 @@
+---
+title: 'Name Enquiry'
+api: 'POST https://api.rollapay.com/payout/name-enquiry'
+description: 'Confirm who owns a bank account before paying it'
+---
+
+## Overview
+
+Resolves a Nigerian bank account to the name the bank holds for it, and returns a `name_enquiry_ref` that [`POST /payout/initiate`](/api-reference/initiate-payout) requires for every bank transfer.
+
+This exists because a bank settles on the account number alone. A payout to a valid account number with the wrong name **succeeds** — the money reaches whoever owns that number, and every response says the payout worked. Confirming ownership first is the only point at which a wrong digit is cheap to fix.
+
+<Note>
+  Bank transfers only. Mobile money has no equivalent lookup — the phone number is the identity.
+</Note>
+
+## Authentication
+
+| Header | Type | Required | Description |
+|--------|------|----------|-------------|
+| `Authorization` | string | Yes | Your secret key (`sk_live_xxx`) |
+| `Content-Type` | string | Yes | `application/json` |
+
+## Request Body
+
+<ParamField body="bank_code" type="string" required>
+  The bank's NIBSS code (e.g. `000013` for GTBank). Fetch the list from [`GET /payout/banks`](/api-reference/banks).
+</ParamField>
+
+<ParamField body="account_number" type="string" required>
+  The account number to resolve (max 30 characters).
+</ParamField>
+
+<ParamField body="currency" type="string" default="NGN">
+  ISO 4217 currency code. **NGN only** — bank payouts are a Nigerian scheme, so any other currency is rejected before a processor is called rather than returning a meaningless lookup.
+</ParamField>
+
+## Response
+
+<ResponseField name="name_enquiry_ref" type="string">
+  Quote this in `destination.name_enquiry_ref` on the payout.
+</ResponseField>
+
+<ResponseField name="account_name" type="string">
+  The name the bank holds for this account. Show it to whoever approves the payout — this is the confirmation step.
+</ResponseField>
+
+<ResponseField name="account_number" type="string">
+  Echoed back.
+</ResponseField>
+
+<ResponseField name="bank_code" type="string">
+  Echoed back.
+</ResponseField>
+
+<ResponseField name="expires_at" type="string">
+  ISO 8601. The reference stops working after this.
+</ResponseField>
+
+## Reference rules
+
+The reference is deliberately narrow, because each rule closes a way money could reach the wrong place:
+
+| Rule | Why |
+|------|-----|
+| **Single use** | Bound to the first payout that quotes it. A second payout must resolve the account again rather than inherit an older confirmation. |
+| **30 minute lifetime** | Account ownership changes. A stale confirmation is not a confirmation. |
+| **Tied to one account** | The `bank_code`, `account_number` and `account_name` on the payout must all match the enquiry, so one reference cannot authorise a payout to a different account or beneficiary. |
+| **Tied to your organization** | A reference issued to one merchant cannot be used by another. |
+
+## Example
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.rollapay.com/payout/name-enquiry" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bank_code": "000013",
+    "account_number": "0123456789",
+    "currency": "NGN"
+  }'
+```
+
+```javascript Node.js
+const response = await fetch('https://api.rollapay.com/payout/name-enquiry', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${secretKey}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    bank_code: '000013',
+    account_number: '0123456789',
+    currency: 'NGN',
+  }),
+});
+
+const { data } = await response.json();
+// data.account_name    → show this for confirmation
+// data.name_enquiry_ref → send this with the payout
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.rollapay.com/payout/name-enquiry',
+    headers={'Authorization': f'Bearer {secret_key}', 'Content-Type': 'application/json'},
+    json={'bank_code': '000013', 'account_number': '0123456789', 'currency': 'NGN'},
+)
+data = response.json()['data']
+```
+</CodeGroup>
+
+```json Response
+{
+  "success": true,
+  "message": "Account resolved",
+  "data": {
+    "name_enquiry_ref": "NE-1785413925129-40HC3YFOIE7K",
+    "account_name": "JOHN DOE",
+    "account_number": "0123456789",
+    "bank_code": "000013",
+    "expires_at": "2026-07-30T12:30:00.000Z"
+  }
+}
+```
+
+## Errors
+
+| Message | Meaning |
+|---------|---------|
+| `Could not resolve the account name for this account number and bank` | The account number does not exist at that bank, or the bank could not be reached. |
+| `No payout processor available for <currency>` | No active payout processor is configured for that currency. |
+| `Unknown name_enquiry_ref` | On payout: the reference does not exist, or belongs to another merchant. |
+| `name_enquiry_ref has already been used for payout <ref>` | On payout: single use. Resolve the account again. |
+| `name_enquiry_ref has expired` | On payout: older than 30 minutes. Resolve the account again. |
+| `name_enquiry_ref was issued for a different account` | On payout: the bank code or account number does not match the enquiry. |
+| `account_name does not match the resolved account holder "<name>"` | On payout: you resolved one beneficiary and paid against another's name. The reference stays unspent. |

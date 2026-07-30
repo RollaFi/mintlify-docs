@@ -1,0 +1,272 @@
+---
+title: 'Bank Transfer Payout'
+api: 'POST https://api.rollapay.com/payout/initiate'
+description: 'Send money to a Nigerian bank account via NIP'
+---
+
+## Overview
+
+Send money from your wallet to any Nigerian bank account. Rolla Pay routes the transfer over NIP.
+
+**Supported currencies:** `NGN`
+
+Bank transfers are a **three-step flow**. You cannot pay an account you have not resolved:
+
+<Steps>
+  <Step title="List banks">
+    [`GET /payout/banks`](/api-reference/banks) — get the NIBSS code for the recipient's bank.
+  </Step>
+  <Step title="Resolve the account">
+    [`POST /payout/name-enquiry`](/api-reference/name-enquiry) — confirm who owns the account. Returns the account holder's name and a single-use `name_enquiry_ref`.
+  </Step>
+  <Step title="Send the payout">
+    `POST /payout/initiate` — quote that reference.
+  </Step>
+</Steps>
+
+<Warning>
+  A bank settles on the account number alone. A payout to a valid account number with the wrong name **succeeds**, and the money reaches whoever owns that number — no error, nothing to reverse. Step 2 is the only point at which a wrong digit is cheap to fix, which is why the reference is required rather than advisory.
+</Warning>
+
+For mobile money, see [Mobile Money Payout](/api-reference/mobile-money-payout). Common parameters — `amount`, `currency`, `narration`, `reference`, `fee_source` — are documented on [Initiate Payout](/api-reference/initiate-payout).
+
+## Authentication
+
+```
+Authorization: Bearer sk_live_your_secret_key
+```
+
+<Note>
+  Use `sk_test_*` keys for testing and `sk_live_*` keys for production.
+</Note>
+
+## Destination Parameters
+
+<ParamField body="destination.type" type="string" required>
+  Must be `bank_transfer`.
+</ParamField>
+
+<ParamField body="destination.bank_code" type="string" required>
+  The bank's NIBSS code (e.g. `000013` for GTBank), from [`GET /payout/banks`](/api-reference/banks). Must match the code used for the name enquiry.
+</ParamField>
+
+<ParamField body="destination.account_number" type="string" required>
+  The recipient's account number. Must match the number used for the name enquiry.
+</ParamField>
+
+<ParamField body="destination.name_enquiry_ref" type="string" required>
+  The `name_enquiry_ref` from [`POST /payout/name-enquiry`](/api-reference/name-enquiry).
+
+  Valid for 30 minutes and **single use** — once a payout has quoted it, it is bound to that payout. Resolve the account afresh for each payout.
+</ParamField>
+
+<ParamField body="destination.account_name" type="string" required>
+  Echo back the `account_name` from the name enquiry.
+
+  It is checked against the enquiry and never sent to the bank — the payout uses the resolved name. What this catches is your side: resolving one beneficiary and then paying out against another's details.
+
+  Compared ignoring case, punctuation and word order, so `doe, john` matches `JOHN DOE`. A genuinely different name is rejected and the reference stays unspent.
+</ParamField>
+
+## Step 1: Resolve the account
+
+```bash
+curl -X POST "https://api.rollapay.com/payout/name-enquiry" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bank_code": "000013",
+    "account_number": "0123456789",
+    "currency": "NGN"
+  }'
+```
+
+```json Response
+{
+  "success": true,
+  "message": "Account resolved",
+  "data": {
+    "name_enquiry_ref": "NE-1785413925129-40HC3YFOIE7K",
+    "account_name": "JOHN DOE",
+    "account_number": "0123456789",
+    "bank_code": "000013",
+    "expires_at": "2026-07-30T12:30:00.000Z"
+  }
+}
+```
+
+Show `account_name` to whoever approves the payout before continuing.
+
+## Step 2: Send the payout
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.rollapay.com/payout/initiate" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 1000,
+    "currency": "NGN",
+    "destination": {
+      "type": "bank_transfer",
+      "bank_code": "000013",
+      "account_number": "0123456789",
+      "account_name": "JOHN DOE",
+      "name_enquiry_ref": "NE-1785413925129-40HC3YFOIE7K"
+    },
+    "narration": "Salary payment",
+    "reference": "SAL_JAN_001"
+  }'
+```
+
+```javascript Node.js
+const secretKey = 'sk_live_your_secret_key';
+
+// 1. Resolve the account
+const enquiry = await fetch('https://api.rollapay.com/payout/name-enquiry', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${secretKey}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    bank_code: '000013',
+    account_number: '0123456789',
+    currency: 'NGN',
+  }),
+}).then((r) => r.json());
+
+// 2. Pay it
+const response = await fetch('https://api.rollapay.com/payout/initiate', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${secretKey}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    amount: 1000,
+    currency: 'NGN',
+    destination: {
+      type: 'bank_transfer',
+      bank_code: '000013',
+      account_number: '0123456789',
+      account_name: enquiry.data.account_name,
+      name_enquiry_ref: enquiry.data.name_enquiry_ref,
+    },
+    narration: 'Salary payment',
+    reference: 'SAL_JAN_001',
+  }),
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+secret_key = 'sk_live_your_secret_key'
+headers = {'Authorization': f'Bearer {secret_key}', 'Content-Type': 'application/json'}
+
+# 1. Resolve the account
+enquiry = requests.post(
+    'https://api.rollapay.com/payout/name-enquiry',
+    headers=headers,
+    json={'bank_code': '000013', 'account_number': '0123456789', 'currency': 'NGN'},
+).json()['data']
+
+# 2. Pay it
+response = requests.post(
+    'https://api.rollapay.com/payout/initiate',
+    headers=headers,
+    json={
+        'amount': 1000,
+        'currency': 'NGN',
+        'destination': {
+            'type': 'bank_transfer',
+            'bank_code': '000013',
+            'account_number': '0123456789',
+            'account_name': enquiry['account_name'],
+            'name_enquiry_ref': enquiry['name_enquiry_ref'],
+        },
+        'narration': 'Salary payment',
+        'reference': 'SAL_JAN_001',
+    },
+)
+data = response.json()
+```
+
+```php PHP
+<?php
+$secretKey = 'sk_live_your_secret_key';
+$headers = ["Authorization: Bearer $secretKey", 'Content-Type: application/json'];
+
+// 1. Resolve the account
+$ch = curl_init('https://api.rollapay.com/payout/name-enquiry');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+    'bank_code' => '000013', 'account_number' => '0123456789', 'currency' => 'NGN',
+]));
+$enquiry = json_decode(curl_exec($ch), true)['data'];
+curl_close($ch);
+
+// 2. Pay it
+$body = json_encode([
+    'amount' => 1000, 'currency' => 'NGN',
+    'destination' => [
+        'type' => 'bank_transfer',
+        'bank_code' => '000013',
+        'account_number' => '0123456789',
+        'account_name' => $enquiry['account_name'],
+        'name_enquiry_ref' => $enquiry['name_enquiry_ref'],
+    ],
+    'narration' => 'Salary payment', 'reference' => 'SAL_JAN_001',
+]);
+$ch = curl_init('https://api.rollapay.com/payout/initiate');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+$result = json_decode(curl_exec($ch), true);
+curl_close($ch);
+```
+</CodeGroup>
+
+<ResponseExample>
+```json 200 Payout Initiated
+{
+  "success": true,
+  "message": "Payout initiated",
+  "data": {
+    "reference": "PAYOUT-RP-1785413925129-40HC3YFOIE",
+    "merchant_reference": "SAL_JAN_001",
+    "amount": 1020,
+    "fee": 20,
+    "net_amount": 1000,
+    "currency": "NGN",
+    "status": "pending",
+    "fee_source": "balance",
+    "created_at": "2026-07-30T12:00:00.000Z"
+  }
+}
+```
+</ResponseExample>
+
+## Errors
+
+| Message | Meaning |
+|---------|---------|
+| `Unknown name_enquiry_ref` | The reference does not exist, or belongs to another merchant. |
+| `name_enquiry_ref has already been used for payout <ref>` | Single use. Resolve the account again. |
+| `name_enquiry_ref has expired` | Older than 30 minutes. Resolve the account again. |
+| `name_enquiry_ref was issued for a different account` | The bank code or account number does not match the enquiry. |
+| `account_name does not match the resolved account holder "<name>"` | You resolved one beneficiary and paid against another's name. |
+| `Insufficient wallet balance` | Under the default `fee_source: "balance"`, you need `amount + fee`. |
+
+## Next Steps
+
+1. The payout starts as `pending` and moves to `processing` once sent to the processor.
+2. A [webhook](/api-reference/webhooks) (`payout.completed` or `payout.failed`) fires when it is finalized.
+3. You can also poll [Verify Payout](/api-reference/verify-payout).
+4. If a payout fails, the funds are credited back to your wallet automatically.

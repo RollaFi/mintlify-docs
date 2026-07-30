@@ -10,9 +10,10 @@ Rolla Pay Payouts lets you disburse funds from your wallet to any recipient — 
 ## How It Works
 
 1. **Fund your wallet** — Your wallet is funded automatically from settled transactions, or manually via bank deposit.
-2. **Initiate a payout** — Call the API with the amount, recipient details, and a signed request.
-3. **Payout is processed** — Rolla Pay routes the payout to the appropriate processor (bank transfer or mobile money).
-4. **Receive confirmation** — A webhook notification is sent when the payout completes or fails.
+2. **Resolve the account** — For bank transfers, call [name enquiry](/api-reference/name-enquiry) to confirm who owns the account. You get back the account holder's name and a `name_enquiry_ref`.
+3. **Initiate a payout** — Call the API with the amount, recipient details, and that reference.
+4. **Payout is processed** — Rolla Pay routes the payout to the appropriate processor (bank transfer or mobile money).
+5. **Receive confirmation** — A webhook notification is sent when the payout completes or fails.
 
 ## Payout Methods
 
@@ -39,8 +40,20 @@ stateDiagram-v2
 
 ## Quick Example
 
-```bash
-curl -X POST "https://api.rollapay.com/payouts" \
+```bash Step 1 — resolve the account
+curl -X POST "https://api.rollapay.com/payout/name-enquiry" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bank_code": "000013",
+    "account_number": "0123456789",
+    "currency": "NGN"
+  }'
+# → { "account_name": "JOHN DOE", "name_enquiry_ref": "NE-1785413925129-40HC3YFOIE7K", ... }
+```
+
+```bash Step 2 — send the payout
+curl -X POST "https://api.rollapay.com/payout/initiate" \
   -H "Authorization: Bearer sk_live_your_secret_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -50,7 +63,8 @@ curl -X POST "https://api.rollapay.com/payouts" \
       "type": "bank_transfer",
       "bank_code": "000013",
       "account_number": "0123456789",
-      "account_name": "John Doe"
+      "account_name": "JOHN DOE",
+      "name_enquiry_ref": "NE-1785413925129-40HC3YFOIE7K"
     },
     "narration": "Salary payment"
   }'

@@ -1,0 +1,162 @@
+---
+title: 'Mobile Money Payout'
+api: 'POST https://api.rollapay.com/payout/initiate'
+description: 'Send money to a mobile money wallet'
+---
+
+## Overview
+
+Send money from your wallet to a mobile money wallet across Africa.
+
+**Supported currencies:** `GHS` (Ghana), `KES` (Kenya), `ZMW` (Zambia)
+
+Mobile money is a **single call**. There is no name enquiry step and no bank list: the phone number is the identity, so there is no account to resolve first.
+
+<Note>
+  This is the difference from [Bank Transfer Payout](/api-reference/bank-transfer-payout), which requires a `name_enquiry_ref`. Sending `bank_code`, `account_name` or `name_enquiry_ref` here is rejected — a mobile money destination takes a phone number and nothing else.
+</Note>
+
+Common parameters — `amount`, `currency`, `narration`, `reference`, `fee_source` — are documented on [Initiate Payout](/api-reference/initiate-payout).
+
+## Authentication
+
+```
+Authorization: Bearer sk_live_your_secret_key
+```
+
+<Note>
+  Use `sk_test_*` keys for testing and `sk_live_*` keys for production.
+</Note>
+
+## Destination Parameters
+
+<ParamField body="destination.type" type="string" required>
+  Must be `mobile_money`.
+</ParamField>
+
+<ParamField body="destination.phone_number" type="string" required>
+  The mobile money number in E.164 format without a leading `+` (e.g. `233501234567` for Ghana). Between 9 and 15 digits.
+
+  <Warning>
+    Double-check this. A mobile money transfer is delivered on the number alone — there is no name to confirm it against, so a wrong digit reaches whoever holds that number, and the money only returns if the processor rejects it.
+  </Warning>
+</ParamField>
+
+## Example
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.rollapay.com/payout/initiate" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 50,
+    "currency": "GHS",
+    "destination": {
+      "type": "mobile_money",
+      "phone_number": "233501234567"
+    },
+    "narration": "Commission payout",
+    "reference": "COM_JAN_014"
+  }'
+```
+
+```javascript Node.js
+const secretKey = 'sk_live_your_secret_key';
+
+const response = await fetch('https://api.rollapay.com/payout/initiate', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${secretKey}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    amount: 50,
+    currency: 'GHS',
+    destination: {
+      type: 'mobile_money',
+      phone_number: '233501234567',
+    },
+    narration: 'Commission payout',
+    reference: 'COM_JAN_014',
+  }),
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.rollapay.com/payout/initiate',
+    headers={
+        'Authorization': f'Bearer {secret_key}',
+        'Content-Type': 'application/json',
+    },
+    json={
+        'amount': 50,
+        'currency': 'GHS',
+        'destination': {
+            'type': 'mobile_money',
+            'phone_number': '233501234567',
+        },
+        'narration': 'Commission payout',
+        'reference': 'COM_JAN_014',
+    },
+)
+data = response.json()
+```
+
+```php PHP
+<?php
+$secretKey = 'sk_live_your_secret_key';
+$body = json_encode([
+    'amount' => 50, 'currency' => 'GHS',
+    'destination' => ['type' => 'mobile_money', 'phone_number' => '233501234567'],
+    'narration' => 'Commission payout', 'reference' => 'COM_JAN_014',
+]);
+$ch = curl_init('https://api.rollapay.com/payout/initiate');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer $secretKey", 'Content-Type: application/json']);
+$result = json_decode(curl_exec($ch), true);
+curl_close($ch);
+```
+</CodeGroup>
+
+<ResponseExample>
+```json 200 Payout Initiated
+{
+  "success": true,
+  "message": "Payout initiated",
+  "data": {
+    "reference": "PAYOUT-RP-1785413925129-8KD2MQ4XZR",
+    "merchant_reference": "COM_JAN_014",
+    "amount": 50.5,
+    "fee": 0.5,
+    "net_amount": 50,
+    "currency": "GHS",
+    "status": "pending",
+    "fee_source": "balance",
+    "created_at": "2026-07-30T12:00:00.000Z"
+  }
+}
+```
+</ResponseExample>
+
+## Errors
+
+| Message | Meaning |
+|---------|---------|
+| `No active GHS wallet found` | You have no active wallet in that currency. |
+| `Insufficient wallet balance` | Under the default `fee_source: "balance"`, you need `amount + fee`. |
+| `No active payout processor found for currency <code>` | No processor is configured for that currency. The payout fails and the wallet is credited back. |
+
+## Next Steps
+
+1. The payout starts as `pending` and moves to `processing` once sent to the processor.
+2. A [webhook](/api-reference/webhooks) (`payout.completed` or `payout.failed`) fires when it is finalized.
+3. You can also poll [Verify Payout](/api-reference/verify-payout).
+4. If a payout fails, the funds are credited back to your wallet automatically.
