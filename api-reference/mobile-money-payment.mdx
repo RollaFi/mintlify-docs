@@ -8,11 +8,11 @@ description: 'Accept payments via mobile money (M-Pesa, MTN MoMo, Airtel Money, 
 
 Accept payments from mobile money wallets across Africa. When you initiate a mobile money payment, the customer receives an STK push (payment prompt) on their phone and confirms the payment by entering their mobile money PIN.
 
-**Supported currencies:** `GHS` (Ghana), `KES` (Kenya), `ZMW` (Zambia)
+**Currencies:** commonly `GHS` (Ghana), `KES` (Kenya) and `ZMW` (Zambia). The API does not restrict the currency itself — which ones you can charge depends on the mobile money processors enabled on your account. Contact support to confirm what is enabled for you.
 
-<Note>
-  The customer's phone number is required for mobile money payments — this is the number linked to their mobile money wallet.
-</Note>
+<Warning>
+  The wallet to debit goes in **`mobileMoney.phone`**, not `customer.phone`. `customer.phone` is stored as a contact detail and is never sent to the processor — a request without `mobileMoney` is rejected with a 400.
+</Warning>
 
 ## Authentication
 
@@ -37,11 +37,23 @@ Authorization: Bearer sk_live_your_secret_key
 </ParamField>
 
 <ParamField body="currency" type="string" required>
-  Three-letter ISO currency code. Supported: `GHS`, `KES`, `ZMW`
+  Three-letter ISO currency code, e.g. `GHS`, `KES`, `ZMW`. Must be a currency your enabled mobile money processors support.
 </ParamField>
 
 <ParamField body="channel" type="string" required>
   Must be `mobile_money`
+</ParamField>
+
+<ParamField body="mobileMoney" type="object" required>
+  The wallet being debited. **Required for this channel** — omitting it returns a 400.
+  <Expandable title="properties">
+    <ParamField body="phone" type="string" required>
+      The mobile money wallet number, including country code (e.g., `233241234567` for Ghana, `254712345678` for Kenya). Max 20 characters.
+    </ParamField>
+    <ParamField body="provider" type="string">
+      Wallet provider, e.g. `MTN`, `VODAFONE`, `AIRTELTIGO`, `MPESA`. Max 50 characters. Where omitted, the processor resolves it from the number.
+    </ParamField>
+  </Expandable>
 </ParamField>
 
 <ParamField body="customer" type="object" required>
@@ -53,8 +65,8 @@ Authorization: Bearer sk_live_your_secret_key
     <ParamField body="name" type="string">
       Customer's full name
     </ParamField>
-    <ParamField body="phone" type="string" required>
-      Customer's mobile money phone number (e.g., "233241234567" for Ghana, "254712345678" for Kenya). Must include the country code.
+    <ParamField body="phone" type="string">
+      Contact phone number. **Not used to debit the wallet** — put that in `mobileMoney.phone`. Max 20 characters.
     </ParamField>
   </Expandable>
 </ParamField>
@@ -87,13 +99,14 @@ Authorization: Bearer sk_live_your_secret_key
       Unique transaction reference or your custom reference if provided
     </ResponseField>
     <ResponseField name="status" type="string">
-      Transaction status. Will be `pending` — waiting for the customer to confirm on their phone.
-    </ResponseField>
-    <ResponseField name="message" type="string">
-      Additional context (e.g., "STK push sent to customer's phone")
+      Transaction status. `pending` — waiting for the customer to confirm on their phone.
     </ResponseField>
   </Expandable>
 </ResponseField>
+
+<Note>
+  The initiate response is intentionally minimal. To see the decline reason, AVS/CVV results or any other detail, call [Verify Transaction](/api-reference/verify-transaction).
+</Note>
 
 <RequestExample>
 ```bash curl
@@ -107,8 +120,11 @@ curl -X POST "https://api.rollapay.com/transaction/initiate" \
     "channel": "mobile_money",
     "customer": {
       "email": "customer@example.com",
-      "name": "Kwame Asante",
-      "phone": "233241234567"
+      "name": "Kwame Asante"
+    },
+    "mobileMoney": {
+      "phone": "233241234567",
+      "provider": "MTN"
     },
     "callbackUrl": "https://yoursite.com/callback",
     "description": "Order #78901",
@@ -132,8 +148,11 @@ const response = await fetch('https://api.rollapay.com/transaction/initiate', {
     channel: 'mobile_money',
     customer: {
       email: 'customer@example.com',
-      name: 'Kwame Asante',
-      phone: '233241234567'
+      name: 'Kwame Asante'
+    },
+    mobileMoney: {
+      phone: '233241234567',
+      provider: 'MTN'
     },
     callbackUrl: 'https://yoursite.com/callback',
     description: 'Order #78901',
@@ -162,8 +181,11 @@ response = requests.post(
         'channel': 'mobile_money',
         'customer': {
             'email': 'customer@example.com',
-            'name': 'Kwame Asante',
-            'phone': '233241234567'
+            'name': 'Kwame Asante'
+        },
+        'mobileMoney': {
+            'phone': '233241234567',
+            'provider': 'MTN'
         },
         'callbackUrl': 'https://yoursite.com/callback',
         'description': 'Order #78901',
@@ -188,8 +210,11 @@ $data = [
     'channel' => 'mobile_money',
     'customer' => [
         'email' => 'customer@example.com',
-        'name' => 'Kwame Asante',
-        'phone' => '233241234567'
+        'name' => 'Kwame Asante'
+    ],
+    'mobileMoney' => [
+        'phone' => '233241234567',
+        'provider' => 'MTN'
     ],
     'callbackUrl' => 'https://yoursite.com/callback',
     'description' => 'Order #78901',
@@ -218,7 +243,7 @@ $result = json_decode($response, true);
 ```json 200 STK Push Sent
 {
   "success": true,
-  "message": "STK push sent to customer's phone",
+  "message": "Transaction initiated",
   "data": {
     "reference": "ORD-78901",
     "status": "pending"
@@ -226,10 +251,17 @@ $result = json_decode($response, true);
 }
 ```
 
+```json 400 Missing mobileMoney
+{
+  "success": false,
+  "message": "mobileMoney: mobileMoney is required for mobile_money payments — expected { phone, provider? }. Note customer.phone is not used to debit the wallet"
+}
+```
+
 ```json 400 Validation Error
 {
   "success": false,
-  "message": "customer.phone: Phone number is required for mobile money payments"
+  "message": "mobileMoney.phone: Phone number is required"
 }
 ```
 

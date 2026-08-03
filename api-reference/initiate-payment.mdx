@@ -76,7 +76,49 @@ These parameters are shared across all payment channels.
       Customer's full name
     </ParamField>
     <ParamField body="phone" type="string">
-      Customer's phone number
+      Customer's phone number. Contact detail only — for mobile money, the wallet to debit goes in `mobileMoney.phone`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="card" type="object">
+  **Required when `channel` is `card`.** See [Card Payment](/api-reference/card-payment) for full details.
+  <Expandable title="properties">
+    <ParamField body="number" type="string" required>
+      Card number, 13–19 digits
+    </ParamField>
+    <ParamField body="expiryMonth" type="string" required>
+      Two digits, `01`–`12`
+    </ParamField>
+    <ParamField body="expiryYear" type="string" required>
+      Two or four digits
+    </ParamField>
+    <ParamField body="cvv" type="string" required>
+      3 or 4 digits
+    </ParamField>
+    <ParamField body="holderName" type="string">
+      Cardholder name (max 100 characters)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="mobileMoney" type="object">
+  **Required when `channel` is `mobile_money`.** See [Mobile Money Payment](/api-reference/mobile-money-payment) for full details.
+  <Expandable title="properties">
+    <ParamField body="phone" type="string" required>
+      The mobile money wallet to debit, including country code (max 20 characters)
+    </ParamField>
+    <ParamField body="provider" type="string">
+      Wallet provider, e.g. `MTN`, `VODAFONE`, `AIRTELTIGO` (max 50 characters)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="bankTransfer" type="object">
+  Optional for `bank_transfer`. Virtual-account providers do not need a bank code upfront.
+  <Expandable title="properties">
+    <ParamField body="bankCode" type="string" required>
+      Bank code
     </ParamField>
   </Expandable>
 </ParamField>

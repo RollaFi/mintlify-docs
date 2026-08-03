@@ -39,7 +39,7 @@ Because this needs your secret key, call it from your backend and cache the resu
 
   <Expandable title="Bank">
     <ResponseField name="bankName" type="string">
-      Display name, e.g. `Guaranty Trust Bank`.
+      Display name, e.g. `GTBank Plc`. Casing is inconsistent across the source list — do not rely on it.
     </ResponseField>
 
     <ResponseField name="bankCode" type="string">
@@ -96,17 +96,17 @@ by_code = {bank['bankCode']: bank['bankName'] for bank in banks}
       {
         "bankName": "Access Bank",
         "bankCode": "000014",
-        "institutionCode": "044"
+        "institutionCode": "ABP"
       },
       {
-        "bankName": "Guaranty Trust Bank",
+        "bankName": "GTBank Plc",
         "bankCode": "000013",
-        "institutionCode": "058"
+        "institutionCode": "GTB"
       },
       {
-        "bankName": "Zenith Bank",
+        "bankName": "ZENITH BANK PLC",
         "bankCode": "000015",
-        "institutionCode": "057"
+        "institutionCode": "ZIB"
       }
     ]
   }
