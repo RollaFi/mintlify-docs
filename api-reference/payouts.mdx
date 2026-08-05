@@ -59,11 +59,15 @@ Use `sk_test_*` keys for testing and `sk_live_*` keys for production.
 
 When a payout completes or fails, Rolla Pay sends a webhook to your configured webhook URL.
 
+Both events are enabled by default. You can turn them off under **Settings > API Keys & Webhooks** in the [Rolla Dashboard](https://merchant.rollapay.com). Only payouts initiated through the API send webhooks — payouts made from the dashboard do not.
+
 ### `payout.completed`
 
 ```json
 {
   "event": "payout.completed",
+  "timestamp": "2026-07-26T19:02:15.000Z",
+  "webhookId": "550e8400-e29b-41d4-a716-446655440000",
   "data": {
     "reference": "WDR_A1B2C3D4E5F6",
     "merchant_reference": "SAL_JAN_001",
@@ -72,9 +76,12 @@ When a payout completes or fails, Rolla Pay sends a webhook to your configured w
     "net_amount": 975,
     "currency": "NGN",
     "status": "completed",
-    "destination_account_number": "0123456789",
-    "destination_bank_code": "000013",
-    "destination_account_name": "John Doe",
+    "destination": {
+      "type": "bank_account",
+      "bank_code": "000013",
+      "account_number": "0123456789",
+      "account_name": "John Doe"
+    },
     "completed_at": "2026-07-26T19:02:15.000Z"
   }
 }
@@ -85,18 +92,29 @@ When a payout completes or fails, Rolla Pay sends a webhook to your configured w
 ```json
 {
   "event": "payout.failed",
+  "timestamp": "2026-07-26T19:02:15.000Z",
+  "webhookId": "550e8400-e29b-41d4-a716-446655440000",
   "data": {
     "reference": "WDR_A1B2C3D4E5F6",
     "merchant_reference": "SAL_JAN_001",
     "amount": 1000,
     "fee": 25,
+    "net_amount": 975,
     "currency": "NGN",
     "status": "failed",
+    "destination": {
+      "type": "bank_account",
+      "bank_code": "000013",
+      "account_number": "0123456789",
+      "account_name": "John Doe"
+    },
     "failure_reason": "Account not found",
     "failed_at": "2026-07-26T19:02:15.000Z"
   }
 }
 ```
+
+`destination.type` is `bank_account` for bank payouts and `mobile_money` for mobile money payouts (where `bank_code` is omitted). A failed payout is always reversed back to your wallet.
 
 <Note>
 Always verify the webhook signature using your webhook secret before updating any records. See the [Webhooks](/api-reference/webhooks) guide for details.

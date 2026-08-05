@@ -1,0 +1,155 @@
+---
+title: 'Test Payouts'
+description: 'Sandbox payouts with test API keys'
+---
+
+## Overview
+
+Payouts made with a test secret key (`sk_test_*`) run against a sandbox. Every step behaves exactly as it does in live — validation, fees, name enquiry, wallet debit, status transitions, webhooks and reversals — except that no money reaches a bank.
+
+<Note>
+  Your sandbox wallet is created the first time you call the payout API with a test key, but it opens **empty**. Fund it yourself before your first payout — see [Funding your sandbox wallet](#funding-your-sandbox-wallet).
+</Note>
+
+## Sandbox wallet
+
+| | |
+|---|---|
+| Opening balance | Zero |
+| Funded | By you, through the dashboard in Test mode |
+| Visible in the dashboard | Yes — switch the header toggle to Test mode |
+
+The balance falls as sandbox payouts succeed and is restored when one fails, exactly as a live wallet behaves. It is never topped up automatically: a payout against an unfunded wallet fails with `Insufficient wallet balance`, which is the same answer live gives and worth seeing at least once.
+
+## Funding your sandbox wallet
+
+In the dashboard, switch the header toggle to **Test mode**, open your wallet and choose **Fund Test Wallet**. The channels offered are the same ones enabled for that currency in live — bank transfer, mobile money and so on — but every one of them is mocked: no payment is required and nothing reaches a processor.
+
+A funding request behaves like a real one rather than crediting instantly. It is created `awaiting_payment` and settles a few seconds later, so the pending state your integration will meet in production is not skipped in the sandbox.
+
+| Amount | Outcome |
+|---|---|
+| Exactly `1` | Funding fails, so you can test the failure path |
+| Anything else | Funding completes and credits your sandbox wallet |
+
+<Note>
+  Sandbox funding is a dashboard action. There is no test-key API for topping up a sandbox wallet — fund it once in the dashboard and spend it down through the payout API.
+</Note>
+
+## Test accounts
+
+Use these destination account numbers to choose the outcome. Any other account number succeeds.
+
+| Account number | Outcome |
+|---|---|
+| `0000000000` | Payout completes |
+| `0000000001` | Payout is rejected by the bank and reversed back into your sandbox wallet |
+| `0000000002` | Payout stays `processing` for ~60 seconds, then completes |
+| `0000000003` | Name enquiry cannot resolve the account |
+
+<Warning>
+  These accounts cannot be used in live mode. A live payout naming one is rejected with: "Sandbox test accounts cannot be used in live mode." Unlike a rejected card, a real bank transfer cannot be recalled — so a test pointed at production is refused rather than attempted.
+</Warning>
+
+## Name enquiry
+
+Name enquiry in test mode returns a resolved name without contacting a bank, so you are not putting real account numbers through a live lookup while building.
+
+| Account number | Resolves to |
+|---|---|
+| `0000000000` | `SANDBOX SUCCESS ACCOUNT` |
+| `0000000001` | `SANDBOX FAILURE ACCOUNT` |
+| `0000000002` | `SANDBOX PENDING ACCOUNT` |
+| `0000000003` | Fails to resolve |
+| Anything else | `TEST ACCOUNT <last 4 digits>` |
+
+The reference you get back behaves like a live one: single use, bound to the payout that spends it, expiring after 30 minutes, and rejected if the payout names a different account or beneficiary name.
+
+<Warning>
+  A `name_enquiry_ref` issued in test mode cannot be used for a live payout, and the reverse. A reference from the other mode reads as `Unknown name_enquiry_ref`.
+</Warning>
+
+## Example
+
+Resolve the beneficiary, then pay it:
+
+```bash cURL
+# 1. Resolve
+curl -X POST "https://api.rollapay.com/payout/name-enquiry" \
+  -H "Authorization: Bearer sk_test_your_test_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bank_code": "000013",
+    "account_number": "0000000000",
+    "currency": "NGN"
+  }'
+
+# 2. Pay
+curl -X POST "https://api.rollapay.com/payout/initiate" \
+  -H "Authorization: Bearer sk_test_your_test_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 5000,
+    "currency": "NGN",
+    "destination": {
+      "type": "bank_transfer",
+      "bank_code": "000013",
+      "account_number": "0000000000",
+      "account_name": "SANDBOX SUCCESS ACCOUNT",
+      "name_enquiry_ref": "NE-..."
+    },
+    "narration": "Sandbox test",
+    "reference": "my-unique-ref-001"
+  }'
+```
+
+```javascript Node.js
+const headers = {
+  Authorization: 'Bearer sk_test_your_test_key',
+  'Content-Type': 'application/json',
+};
+
+const enquiry = await fetch('https://api.rollapay.com/payout/name-enquiry', {
+  method: 'POST',
+  headers,
+  body: JSON.stringify({
+    bank_code: '000013',
+    account_number: '0000000000',
+    currency: 'NGN',
+  }),
+}).then((r) => r.json());
+
+const payout = await fetch('https://api.rollapay.com/payout/initiate', {
+  method: 'POST',
+  headers,
+  body: JSON.stringify({
+    amount: 5000,
+    currency: 'NGN',
+    destination: {
+      type: 'bank_transfer',
+      bank_code: '000013',
+      account_number: '0000000000',
+      account_name: enquiry.data.account_name,
+      name_enquiry_ref: enquiry.data.name_enquiry_ref,
+    },
+    narration: 'Sandbox test',
+    reference: 'my-unique-ref-001',
+  }),
+}).then((r) => r.json());
+```
+
+## What to expect
+
+`POST /payout/initiate` returns `status: "pending"`. The payout then moves to `processing`, and reaches `completed` or `failed` a few seconds later — not instantly, because a real payout never is. Build against the webhook or `GET /payout/verify/{reference}`, not against the response to `initiate`.
+
+## Webhooks
+
+`payout.completed` and `payout.failed` fire for sandbox payouts, delivered to your **test** webhook URL and signed with your **test** webhook secret — regardless of which mode your dashboard is currently showing. Enable the events in your dashboard webhook settings first, or nothing is sent.
+
+## Separation from live
+
+Sandbox and live are separate sets of books:
+
+- A test key sees only sandbox payouts; a live key sees only live ones. `GET /payout/verify/{reference}` returns `404` for a reference belonging to the other mode.
+- The dashboard shows one mode at a time, following the header toggle. Sandbox wallets, payouts and top-ups appear only in Test mode and never alongside live activity.
+- No sandbox payout ever reaches a bank or a payment processor.

@@ -23,6 +23,10 @@ You can configure separate webhook URLs for test and live modes.
 | `payment.failed`     | Payment failed                            |
 | `refund.completed`   | Refund was processed                      |
 | `dispute.created`    | A dispute has been opened                 |
+| `payout.completed`   | Payout was successfully disbursed         |
+| `payout.failed`      | Payout failed and funds were returned     |
+
+Payout events are only sent for payouts initiated through the API — payouts made from the dashboard do not trigger webhooks. See [Payouts](/api-reference/payouts) for the payload shape.
 
 ## Webhook Payload
 

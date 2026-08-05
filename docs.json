@@ -73,6 +73,7 @@
                 "group": "Payouts",
                 "pages": [
                   "api-reference/payouts",
+                  "api-reference/test-payouts",
                   "api-reference/banks",
                   "api-reference/name-enquiry",
                   "api-reference/initiate-payout",

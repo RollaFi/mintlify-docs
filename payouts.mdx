@@ -9,7 +9,7 @@ Rolla Pay Payouts lets you disburse funds from your wallet to any recipient — 
 
 ## How It Works
 
-1. **Fund your wallet** — Your wallet is funded automatically from settled transactions, or manually via bank deposit.
+1. **Fund your wallet** — Your wallet is funded automatically from settled transactions, or you can top it up from the dashboard through any payment channel enabled for that currency.
 2. **Resolve the account** — For bank transfers, call [name enquiry](/api-reference/name-enquiry) to confirm who owns the account. You get back the account holder's name and a `name_enquiry_ref`.
 3. **Initiate a payout** — Call the API with the amount, recipient details, and that reference.
 4. **Payout is processed** — Rolla Pay routes the payout to the appropriate processor (bank transfer or mobile money).
