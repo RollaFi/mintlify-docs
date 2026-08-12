@@ -1,0 +1,157 @@
+---
+title: 'OwlPay Card Payment'
+api: 'POST https://api.rollapay.com/transaction/initiate'
+description: 'Charge a US debit card the customer registered with you in advance'
+---
+
+## Overview
+
+Charge a debit card belonging to a customer you have already verified. No card details are sent — the card was bound on a hosted page during [Card Verification](/api-reference/owlpay-customers), and you reference the customer by email.
+
+**Currency:** `USD` only. This channel settles from the United States, so the cardholder needs a US debit card. Any other currency is rejected before the request leaves us.
+
+<Warning>
+  **The customer must be verified with a card on file before you can charge them.** This is a one-time setup — see [Card Verification](/api-reference/owlpay-customers). Charging an unregistered customer returns a `400` telling you which step is outstanding.
+</Warning>
+
+<Note>
+  Unlike `card`, this channel takes **no card object**. The customer's card was collected on a hosted page and is charged by reference. Credit cards are not supported.
+</Note>
+
+## Authentication
+
+All requests must include your secret API key in the Authorization header:
+
+```
+Authorization: Bearer sk_live_your_secret_key
+```
+
+## Request Body
+
+<ParamField body="reference" type="string">
+  Optional custom transaction reference. If not provided, one is generated (e.g. `TXN_gGbEEvK25eVgmgrf`). Must be globally unique across all transactions.
+</ParamField>
+
+<ParamField body="amount" type="number" required>
+  The payment amount in USD. Subject to the cardholder's per-transaction, daily, weekly and monthly limits — exceeding one returns a `400` naming the remaining allowance.
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  Must be `USD`.
+</ParamField>
+
+<ParamField body="channel" type="string" required>
+  Must be `owlpay`
+</ParamField>
+
+<ParamField body="customer" type="object" required>
+  Identifies the cardholder. Only `email` is used — it must match a customer you have already verified.
+  <Expandable title="properties">
+    <ParamField body="email" type="string" required>
+      Email of the verified cardholder.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="owlpay" type="object">
+  Optional.
+  <Expandable title="properties">
+    <ParamField body="cardId" type="string">
+      Charge a specific card. Omit it and the customer's first usable card is used — supply it when they have more than one saved.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="callbackUrl" type="string" required>
+  URL to notify when the transaction reaches a final state.
+</ParamField>
+
+<ParamField body="description" type="string">
+  Optional description, max 500 characters.
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  Optional key-value pairs returned on the transaction and its webhooks.
+</ParamField>
+
+## Request
+
+```bash
+curl -X POST https://api.rollapay.com/transaction/initiate \
+  -H "Authorization: Bearer sk_test_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 25,
+    "currency": "USD",
+    "channel": "owlpay",
+    "customer": { "email": "jane.doe@example.com" },
+    "callbackUrl": "https://yourapp.com/callback"
+  }'
+```
+
+## Response
+
+```json
+{
+  "success": true,
+  "message": "Transaction initiated",
+  "data": {
+    "transactionId": "7977140e-a26f-4dc1-851c-279cd9e72964",
+    "reference": "TXN_NH3KDiK98sDUI3FN",
+    "status": "pending",
+    "message": "Charge requested. OwlPay has emailed the cardholder to approve it — the payment completes once they do."
+  }
+}
+```
+
+<Warning>
+  **`status: "pending"` does not mean the money has moved.** The cardholder is emailed to approve the charge, and the card is only debited afterwards. Wait for the webhook before treating the payment as made.
+</Warning>
+
+## Payment lifecycle
+
+This channel takes longer to reach a final state than a card checkout, because the cardholder is asked to confirm and the provider runs its own compliance check.
+
+| Stage | What is happening |
+|---|---|
+| `pending` | Charge requested. The cardholder has been emailed. |
+| | Compliance review, then the cardholder confirms. |
+| `successful` | **The card has been debited.** Safe to fulfil the order. |
+
+The transaction becomes `successful` the moment the card is debited — not when funds reach us. Settlement follows on your normal schedule, exactly as with any other card payment.
+
+<Note>
+  Debit card settlement takes **1 US business day** after the debit. That affects when you are paid, not when the transaction is confirmed.
+</Note>
+
+## Errors
+
+Each of these tells you precisely which step is outstanding.
+
+<ResponseField name="This customer is not registered for card payments" type="400">
+  Call `POST /owlpay/customers` to register them and get their verification link.
+</ResponseField>
+
+<ResponseField name="This customer has not finished verifying" type="400">
+  They have been registered but have not accepted the terms yet.
+</ResponseField>
+
+<ResponseField name="This customer has no card that can be charged" type="400">
+  Call `POST /owlpay/customers/{customerId}/cards` for their card entry link.
+</ResponseField>
+
+<ResponseField name="That exceeds this customer's remaining limit" type="400">
+  The amount is above their remaining per-transaction, daily, weekly or monthly allowance. The message names the figure.
+</ResponseField>
+
+<ResponseField name="This channel charges in USD only" type="400">
+  The channel settles from the United States and cannot accept another currency.
+</ResponseField>
+
+<ResponseField name="Card payments are temporarily unavailable" type="503">
+  A problem on our side. Retry shortly; if it persists, contact support.
+</ResponseField>
+
+## Verifying a transaction
+
+Use the standard [Verify Transaction](/api-reference/verify-transaction) endpoint with the reference. Do not rely on the initiate response — it only confirms the charge was requested.

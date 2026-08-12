@@ -11,6 +11,10 @@ Rolla Pay allows you to accept payments from customers across multiple channels 
 
 1. **Initiate a payment** — Your server calls the Rolla Pay API with the amount, currency, and customer details.
 2. **Customer pays** — Depending on the channel, the customer completes payment via card form, USSD prompt, bank transfer, mobile money, or their PalmPay wallet balance.
+
+<Note>
+  **OwlPay works differently.** The cardholder is verified and binds a card once, up front, and is then charged by reference with no card details in the request. See [Card Verification](/api-reference/owlpay-customers).
+</Note>
 3. **Verify the payment** — Once the customer pays, verify the transaction status via the API or receive a webhook notification.
 4. **Settlement** — Funds are settled to your wallet or bank account based on your configuration.
 
@@ -22,6 +26,7 @@ Rolla Pay allows you to accept payments from customers across multiple channels 
 | Bank Transfer | NGN | Customer transfers to a dynamic virtual account |
 | Mobile Money | GHS | STK push / USSD prompt on customer's phone |
 | PalmPay | NGN | Customer authorises the debit on PalmPay's checkout page |
+| OwlPay | USD | US debit card, charged after a one-time customer verification |
 
 ## Integration Options
 

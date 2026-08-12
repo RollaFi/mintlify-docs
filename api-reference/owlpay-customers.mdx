@@ -1,0 +1,243 @@
+---
+title: 'Card Verification (OwlPay)'
+api: 'POST https://api.rollapay.com/owlpay/customers'
+description: 'Register and verify a cardholder before charging their card'
+---
+
+## Overview
+
+The `owlpay` channel charges a card the customer has registered with you in advance. Unlike every other channel, it will not accept a card from an anonymous shopper — the cardholder must first be verified and have bound a card, which is a **one-time setup per customer**.
+
+That setup is what these endpoints do. Once a customer is verified with a card on file, you charge them through [Initiate Payment](/api-reference/initiate-payment) with `channel: "owlpay"`, exactly like any other channel.
+
+```
+POST /owlpay/customers                register the cardholder → terms link
+      customer accepts terms          (hosted page)
+POST /owlpay/customers/{id}/cards     card entry page → they enter their card
+POST /transaction/initiate            charge them, any number of times
+```
+
+<Note>
+  **US cardholders only.** This channel settles from the United States, so the cardholder needs a US debit card. Charges are in `USD`; any other currency is rejected.
+</Note>
+
+<Warning>
+  **Credit cards are not supported** — debit cards only. Card details are entered on a hosted page and never reach your servers or ours.
+</Warning>
+
+## Authentication
+
+All requests must include your secret API key in the Authorization header:
+
+```
+Authorization: Bearer sk_live_your_secret_key
+```
+
+<Note>
+  Use `sk_test_*` keys for testing and `sk_live_*` keys for production. A customer verified in test mode is **not** verified in live — the two are separate environments and each needs its own registration.
+</Note>
+
+---
+
+## Register a cardholder
+
+`POST /owlpay/customers`
+
+Registers a customer and returns the terms page they must accept.
+
+Takes the customer's details rather than an ID — you do not need to have created a customer with us first. The customer record is created or matched on email, so calling this again for the same person is safe and returns the same record.
+
+### Request Body
+
+<ParamField body="email" type="string" required>
+  Customer's email address. Used to match an existing customer, and where the payment provider sends charge confirmations.
+</ParamField>
+
+<ParamField body="firstName" type="string" required>
+  Customer's first name, as it appears on their identity documents.
+</ParamField>
+
+<ParamField body="lastName" type="string" required>
+  Customer's last name, as it appears on their identity documents.
+</ParamField>
+
+<ParamField body="birthDate" type="string" required>
+  Date of birth in `YYYY-MM-DD` format. Required for identity verification.
+</ParamField>
+
+<ParamField body="phone" type="string">
+  Contact phone number.
+</ParamField>
+
+<ParamField body="redirectUrl" type="string">
+  Where to send the customer after they accept the terms. Must be a publicly reachable HTTPS URL — the provider rejects `localhost` and private addresses, so in local development the customer simply stays on the terms page after accepting.
+</ParamField>
+
+### Request
+
+```bash
+curl -X POST https://api.rollapay.com/owlpay/customers \
+  -H "Authorization: Bearer sk_test_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "jane.doe@example.com",
+    "firstName": "Jane",
+    "lastName": "Doe",
+    "birthDate": "1990-07-12"
+  }'
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "message": "Cardholder registered",
+  "data": {
+    "customerId": "06c47b07-dec2-4ba8-bb82-a49d8df2c61b",
+    "status": "awaiting_terms",
+    "termsUrl": "https://harbor-sandbox.owlpay.com/agreements?uuid=agt_6Hkcrvnzo0ko",
+    "message": "Send termsUrl to your customer. Once accepted they can add a card."
+  }
+}
+```
+
+Send `termsUrl` to your customer. It is generated fresh on each call and is not stored, so **call this endpoint again if you lose it** — an existing customer is returned with a new link rather than being registered twice.
+
+<Note>
+  There is no API to accept the terms on a customer's behalf. It is a signature, and only they can make it.
+</Note>
+
+---
+
+## Check verification status
+
+`GET /owlpay/customers/{customerId}`
+
+Where the customer has got to, and whether they can be charged yet.
+
+```bash
+curl -X GET https://api.rollapay.com/owlpay/customers/06c47b07-dec2-4ba8-bb82-a49d8df2c61b \
+  -H "Authorization: Bearer sk_test_your_secret_key"
+```
+
+```json
+{
+  "success": true,
+  "message": "Verification status",
+  "data": {
+    "customerId": "06c47b07-dec2-4ba8-bb82-a49d8df2c61b",
+    "status": "verified",
+    "termsAccepted": true,
+    "canBeCharged": true,
+    "cards": [
+      { "id": "8b2f707d-816a-40da-bd7a-1316904aa16f", "last4": "9905", "brand": "MasterCard" }
+    ]
+  }
+}
+```
+
+<ResponseField name="canBeCharged" type="boolean">
+  The only field you need before charging. True when the customer is verified, has accepted the terms, **and** has at least one usable card. All three are required.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  `not_started` · `awaiting_terms` · `awaiting_identity_check` · `in_review` · `action_required` · `verified` · `rejected`
+</ResponseField>
+
+<Note>
+  `status: "verified"` with `termsAccepted: false` is a real and expected state — identity verification and accepting the terms are independent steps. The customer is not chargeable until both are done, which is what `canBeCharged` reflects.
+</Note>
+
+This endpoint refreshes from the provider on each call while a customer is unverified, so it always reflects reality without waiting for a webhook.
+
+---
+
+## Add a card
+
+`POST /owlpay/customers/{customerId}/cards`
+
+Returns a hosted page where the customer enters their card.
+
+<Warning>
+  The customer must have accepted the terms first. Called earlier, this returns:
+  *"This customer must complete verification before adding a card."*
+</Warning>
+
+```bash
+curl -X POST https://api.rollapay.com/owlpay/customers/{customerId}/cards \
+  -H "Authorization: Bearer sk_test_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{ "redirectUrl": "https://yourapp.com/card-added" }'
+```
+
+```json
+{
+  "success": true,
+  "message": "Card binding started",
+  "data": {
+    "cardId": "23d5ddf9-535c-4b51-bc39-90e4c382275b",
+    "cardEntryUrl": "https://owlti.ng/iHFNUBgI6hJrodcKcvASR8SZNO3jY4Rv",
+    "message": "Send this to your customer to add their card."
+  }
+}
+```
+
+Send `cardEntryUrl` to your customer. Card details are entered there and never touch your servers or ours — you only ever see the last four digits and the brand.
+
+### Test cards
+
+<Note>
+  Use `4242 4242 4242 4242`, expiry `12/31`, CVV `123`, postal code `12345`. Other test cards are listed in [Test Cards](/api-reference/test-cards).
+</Note>
+
+---
+
+## List cards
+
+`GET /owlpay/customers/{customerId}/cards`
+
+```json
+{
+  "success": true,
+  "message": "Cards retrieved",
+  "data": {
+    "cards": [
+      {
+        "id": "8b2f707d-816a-40da-bd7a-1316904aa16f",
+        "last4": "9905",
+        "brand": "MasterCard",
+        "status": "active",
+        "chargeable": true
+      }
+    ]
+  }
+}
+```
+
+<ResponseField name="chargeable" type="boolean">
+  Whether this card can actually be charged. A card can be present but unusable — expired, disabled, or restricted by the provider.
+</ResponseField>
+
+Card status is re-synced from the provider on each call, so a card bound moments ago on the hosted page appears immediately.
+
+---
+
+## Charging the customer
+
+Once `canBeCharged` is true, use the ordinary payment endpoint:
+
+```bash
+curl -X POST https://api.rollapay.com/transaction/initiate \
+  -H "Authorization: Bearer sk_test_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 25,
+    "currency": "USD",
+    "channel": "owlpay",
+    "customer": { "email": "jane.doe@example.com" },
+    "callbackUrl": "https://yourapp.com/callback"
+  }'
+```
+
+See [OwlPay Card Payment](/api-reference/owlpay-payment) for the full payment reference.

@@ -29,15 +29,22 @@
             "groups": [
               {
                 "group": "Get Started",
-                "pages": ["introduction", "authentication"]
+                "pages": [
+                  "introduction",
+                  "authentication"
+                ]
               },
               {
                 "group": "Payments",
-                "pages": ["payments"]
+                "pages": [
+                  "payments"
+                ]
               },
               {
                 "group": "Payouts",
-                "pages": ["payouts"]
+                "pages": [
+                  "payouts"
+                ]
               }
             ]
           }
@@ -52,7 +59,9 @@
             "groups": [
               {
                 "group": "API Reference",
-                "pages": ["api-reference/introduction"]
+                "pages": [
+                  "api-reference/introduction"
+                ]
               },
               {
                 "group": "Payins",
@@ -63,6 +72,8 @@
                   "api-reference/bank-transfer-payment",
                   "api-reference/mobile-money-payment",
                   "api-reference/palmpay-payment",
+                  "api-reference/owlpay-customers",
+                  "api-reference/owlpay-payment",
                   "api-reference/checkout-api",
                   "api-reference/verify-transaction",
                   "api-reference/refunds",
@@ -84,11 +95,15 @@
               },
               {
                 "group": "Webhooks",
-                "pages": ["api-reference/webhooks"]
+                "pages": [
+                  "api-reference/webhooks"
+                ]
               },
               {
                 "group": "API Keys",
-                "pages": ["api-reference/api-keys"]
+                "pages": [
+                  "api-reference/api-keys"
+                ]
               }
             ]
           }
