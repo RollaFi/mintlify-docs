@@ -71,13 +71,19 @@
                   "api-reference/card-payment",
                   "api-reference/bank-transfer-payment",
                   "api-reference/mobile-money-payment",
+                  "api-reference/mobile-money-providers",
                   "api-reference/palmpay-payment",
-                  "api-reference/owlpay-customers",
-                  "api-reference/owlpay-payment",
                   "api-reference/checkout-api",
                   "api-reference/verify-transaction",
                   "api-reference/refunds",
                   "api-reference/response-codes"
+                ]
+              },
+              {
+                "group": "Remittance",
+                "pages": [
+                  "api-reference/owlpay-customers",
+                  "api-reference/owlpay-payment"
                 ]
               },
               {
