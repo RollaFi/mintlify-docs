@@ -1,33 +1,39 @@
 ---
 title: 'Mobile Money Payment'
 api: 'POST https://api.rollapay.com/transaction/initiate'
-description: 'Accept payments via mobile money (M-Pesa, MTN MoMo, Airtel Money, etc.)'
+description: 'Accept payments via mobile money — MTN, Vodafone, AirtelTigo, Orange Money, Wave and Moov Money'
 ---
 
 ## Overview
 
-Accept payments from mobile money wallets across Africa. Most wallets send the customer a prompt on their phone, which they approve with their mobile money PIN. Some finish on the wallet's own page instead — see [Payment flows](#payment-flows).
+Accept payments from mobile money wallets in Ghana, Senegal and Benin. Most wallets send the customer a prompt on their phone, which they approve with their mobile money PIN. Some finish on the wallet's own page instead — see [Payment flows](#payment-flows).
 
-**Currencies:** `GHS` (Ghana) and `XOF` (Senegal) today; `KES` and `ZMW` where enabled. The API does not restrict the currency itself — which ones you can charge depends on the mobile money processors enabled on your account. Contact support to confirm what is enabled for you.
+**Currencies:** `GHS` (Ghana) and `XOF` (Senegal, Benin). The API does not restrict the currency itself — which ones you can charge depends on the mobile money processors enabled on your account. Contact support to confirm what is enabled for you.
 
 <Warning>
   The wallet to debit goes in **`mobileMoney.phone`**, not `customer.phone`. `customer.phone` is stored as a contact detail and is never sent to the processor — a request without `mobileMoney` is rejected with a 400.
 </Warning>
 
-## Wallets by market
+## Wallets by country
 
-In **XOF markets, `mobileMoney.provider` is required** and must be one of the identifiers below. It selects both the wallet and the market, so there is nothing else in the request that says which country the payment is for.
+In **XOF countries, `mobileMoney.provider` is required** and must be one of the identifiers below. It selects both the wallet and the country, so there is nothing else in the request that says where the payment is for.
 
-| Market | Wallet | `provider` | Flow |
-|--------|--------|-----------|------|
-| Senegal | Orange Money | `orange-senegal` | Prompt, after a code the customer generates |
+| Country | Wallet | `provider` | Flow |
+|---------|--------|-----------|------|
+| Senegal | Orange Money | `orange-senegal` | Redirect to Orange |
 | Senegal | Wave | `wave-senegal` | Redirect to Wave |
+| Benin | MTN Mobile Money | `mtn-momo-benin` | Prompt |
+| Benin | Moov Money | `moov-benin` | Prompt |
 | Ghana | MTN, Vodafone, AirtelTigo | `MTN`, `VODAFONE`, `AIRTELTIGO` | Prompt |
 
-Rather than hardcoding this table, call [List Mobile Money Providers](/api-reference/mobile-money-providers) — it returns the wallets currently live in a market, and tells you which flow each one uses.
+Rather than hardcoding this table, call [List Mobile Money Providers](/api-reference/mobile-money-providers) — it returns the wallets currently live in a country, and tells you which flow each one uses.
 
 <Note>
-  Benin and Togo are not live yet. Charging one of their wallets returns a `503` naming the wallet — call [List Mobile Money Providers](/api-reference/mobile-money-providers) to see what is live rather than assuming from this table, since markets are enabled without a change to these docs.
+  Togo is not live yet. Charging one of its wallets returns a `503` naming the wallet — call [List Mobile Money Providers](/api-reference/mobile-money-providers) to see what is live rather than assuming from this table, since countries are enabled without a change to these docs.
+</Note>
+
+<Note>
+  Benin's wallets cap a single charge: **100 to 3,000,000 XOF**. Senegal and Ghana have no such limit.
 </Note>
 
 ## Amounts in XOF
@@ -63,7 +69,7 @@ Authorization: Bearer sk_live_your_secret_key
 </ParamField>
 
 <ParamField body="currency" type="string" required>
-  Three-letter ISO currency code, e.g. `GHS`, `XOF`, `KES`. Must be a currency your enabled mobile money processors support. `XOF` amounts must be whole numbers.
+  Three-letter ISO currency code, e.g. `GHS` or `XOF`. Must be a currency your enabled mobile money processors support. `XOF` amounts must be whole numbers.
 </ParamField>
 
 <ParamField body="channel" type="string" required>
@@ -77,10 +83,10 @@ Authorization: Bearer sk_live_your_secret_key
       The mobile money wallet number, including country code (e.g., `233241234567` for Ghana, `254712345678` for Kenya). Max 20 characters.
     </ParamField>
     <ParamField body="provider" type="string">
-      Which wallet to debit — see [Wallets by market](#wallets-by-market). **Required in XOF markets**, where it also selects the country. Optional in Ghana, where the processor resolves it from the number. Max 50 characters.
+      Which wallet to debit — see [Wallets by country](#wallets-by-country). **Required in XOF countries**, where it also selects the country. Optional in Ghana, where the processor resolves it from the number. Max 50 characters.
     </ParamField>
     <ParamField body="customerCode" type="string">
-      **Required for `orange-senegal`.** Orange has the customer generate a 6-digit code on their handset before the payment is charged — they dial `#144#391#` and enter what comes back. Without it the request is rejected. No other wallet uses this.
+      A pre-authorisation code the customer generates on their handset before the charge, used by wallets on the `pre_otp` flow. Required only where [List Mobile Money Providers](/api-reference/mobile-money-providers) reports `flow: "pre_otp"` — it also returns the `ussd_code` to dial. **No wallet requires it in production today**; send it only when the providers endpoint asks for it.
     </ParamField>
   </Expandable>
 </ParamField>
@@ -141,7 +147,7 @@ Authorization: Bearer sk_live_your_secret_key
 </Note>
 
 <RequestExample>
-```bash Orange Senegal
+```bash cURL
 curl -X POST "https://api.rollapay.com/transaction/initiate" \
   -H "Authorization: Bearer sk_live_your_secret_key" \
   -H "Content-Type: application/json" \
@@ -156,58 +162,10 @@ curl -X POST "https://api.rollapay.com/transaction/initiate" \
     },
     "mobileMoney": {
       "phone": "221786175702",
-      "provider": "orange-senegal",
-      "customerCode": "483920"
+      "provider": "orange-senegal"
     },
     "callbackUrl": "https://yoursite.com/callback",
     "description": "Commande #78902"
-  }'
-```
-
-```bash Wave Senegal
-curl -X POST "https://api.rollapay.com/transaction/initiate" \
-  -H "Authorization: Bearer sk_live_your_secret_key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "reference": "ORD-78903",
-    "amount": 2500,
-    "currency": "XOF",
-    "channel": "mobile_money",
-    "customer": {
-      "email": "client@example.com",
-      "name": "Aminata Diop"
-    },
-    "mobileMoney": {
-      "phone": "221786175702",
-      "provider": "wave-senegal"
-    },
-    "callbackUrl": "https://yoursite.com/callback",
-    "description": "Commande #78903"
-  }'
-```
-
-```bash Ghana
-curl -X POST "https://api.rollapay.com/transaction/initiate" \
-  -H "Authorization: Bearer sk_live_your_secret_key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "reference": "ORD-78901",
-    "amount": 100,
-    "currency": "GHS",
-    "channel": "mobile_money",
-    "customer": {
-      "email": "customer@example.com",
-      "name": "Kwame Asante"
-    },
-    "mobileMoney": {
-      "phone": "233241234567",
-      "provider": "MTN"
-    },
-    "callbackUrl": "https://yoursite.com/callback",
-    "description": "Order #78901",
-    "metadata": {
-      "orderId": "ORD-789"
-    }
   }'
 ```
 
@@ -366,11 +324,11 @@ $result = json_decode($response, true);
 }
 ```
 
-```json 400 Missing Orange Code
+```json 400 Missing Pre-Authorisation Code
 {
   "success": false,
   "status": 400,
-  "message": "mobileMoney.customerCode is required for orange-senegal — the customer generates it by dialling #144#391# on their handset",
+  "message": "mobileMoney.customerCode is required for <provider> — the customer generates it by dialling the ussd_code on their handset",
   "code": "VALIDATION_ERROR"
 }
 ```
@@ -406,25 +364,39 @@ $result = json_decode($response, true);
 
 ## Payment flows
 
-Which one you get depends on the wallet, and the response tells you: `pending` means a prompt is already on the customer's phone, `requires_action` means you have somewhere to send them.
+There are three, and which one a payment takes is a property of the wallet, not of your request. **In XOF countries, ask before you charge:** call [List Mobile Money Providers](/api-reference/mobile-money-providers) for the country and read `flow` on the wallet the customer picked. It tells you what your form has to collect, and it is the only reliable source — wallets change flow without a change to these docs.
 
-### Prompt on the phone
+| `flow` | Collect before charging | After you charge |
+|--------|------------------------|------------------|
+| `stk` | Phone number | A prompt appears on the handset |
+| `pre_otp` | Phone number **and** a code the customer generates by dialling `ussd_code` | A prompt appears on the handset |
+| `redirect` | Phone number | Send the customer to `payment_url` from the charge response |
 
-Ghana's wallets, and Orange Senegal once the code is supplied.
+In Ghana this step is optional — every wallet there is `stk` and `mobileMoney.provider` is resolved from the number.
 
-1. **The prompt arrives.** Nothing to redirect to — it appears on the handset on its own.
-2. **The customer approves it** with their mobile money PIN.
-3. **You find out** by [webhook](/api-reference/webhooks), or by polling [Verify Transaction](/api-reference/verify-transaction) every 3–5 seconds until `status` is `successful`.
+### `stk` — prompt on the phone
 
-### Code first, then prompt
+1. **Charge** with `mobileMoney.phone` and, in XOF, `mobileMoney.provider`.
+2. **The prompt arrives** on the handset on its own. Nothing to redirect to.
+3. **The customer approves it** with their mobile money PIN.
+4. **You find out** by [webhook](/api-reference/webhooks), or by polling [Verify Transaction](/api-reference/verify-transaction) every 3–5 seconds until `status` is `successful`.
 
-Orange Senegal only. Before you charge, the customer dials **`#144#391#`** on their handset and Orange returns a 6-digit code. Collect that, send it as `mobileMoney.customerCode`, and from there it behaves like any other prompt.
+### `pre_otp` — code first, then prompt
 
-Ask for the code on the same screen as the phone number — a customer who has already left to dial a USSD string will not reliably come back.
+1. **Show the customer the `ussd_code`** from the providers endpoint and have them dial it. The wallet returns a short code.
+2. **Collect that code on the same screen as the phone number.** A customer who leaves to dial a USSD string mid-checkout will not reliably come back.
+3. **Charge** with the code in `mobileMoney.customerCode`. Without it the request is rejected with a 400.
+4. From there it is the `stk` flow — a prompt on the handset, approved with a PIN.
 
-### Redirect to the wallet
+### `redirect` — finish on the wallet's own page
 
-Wave Senegal. The response carries `payment_url`; send the customer there and they finish in the Wave app or on Wave's site.
+1. **Charge** with `mobileMoney.phone` and `mobileMoney.provider`.
+2. **The response comes back `requires_action`** carrying a `payment_url`.
+3. **Send the customer there.** They finish in the wallet's app or on its site.
+
+<Note>
+  `stk` and `redirect` ask the customer for exactly the same thing, so a wallet reporting `stk` can still come back `requires_action`. Branch your **form** on `flow`, but branch what you do **after charging** on the response: `pending` means the prompt is already on the phone, `requires_action` means you have somewhere to send them.
+</Note>
 
 <Warning>
   The customer coming back from `payment_url` does not mean they paid. Confirm with the webhook or Verify Transaction before releasing anything.
@@ -432,7 +404,7 @@ Wave Senegal. The response carries `payment_url`; send the customer there and th
 
 ## Expiry
 
-A mobile money payment stays open for a limited window — **15 minutes in XOF markets**, longer elsewhere. If the customer never approves it, the transaction is marked **`failed`** with a `response_code` of `EXPIRED`, which is how you tell an abandoned payment from a declined one on [Verify Transaction](/api-reference/verify-transaction).
+A mobile money payment stays open for **15 minutes**, in both XOF and GHS. If the customer never approves it, the transaction is marked **`failed`** with a `response_code` of `EXPIRED`, which is how you tell an abandoned payment from a declined one on [Verify Transaction](/api-reference/verify-transaction).
 
 Start a new transaction rather than retrying; a reference cannot be reused.
 

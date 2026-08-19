@@ -1,33 +1,29 @@
 ---
 title: 'List Mobile Money Providers'
 api: 'GET https://api.rollapay.com/mobile-money/providers'
-description: 'The mobile money wallets available in a market, and how each one collects authorisation'
+description: 'The mobile money wallets available in a country, and how each one collects authorisation'
 ---
 
 ## Overview
 
-Returns the wallets **your account** can charge in a given market, so your checkout can offer the local options without shipping a hardcoded list.
+The mobile money wallets your account can charge in a country. Build the checkout's wallet list from it instead of hardcoding one, and pass the `slug` back as `mobileMoney.provider` on [Mobile Money Payment](/api-reference/mobile-money-payment).
 
-The answer is scoped to you, not to Rolla's overall coverage: a wallet appears only if the corridor is live *and* your account is enabled for that currency and for mobile money on it. So anything listed here is something you can actually charge — and an empty list means there is nothing to render, not that the market is unsupported.
-
-Liveness is read from the provider itself rather than from a list we maintain, so a market opening up appears here on its own. Treat this endpoint as the source of truth and don't cache the result for long — a wallet can appear or disappear without any announcement from us.
-
-Use the `slug` as `mobileMoney.provider` on [Mobile Money Payment](/api-reference/mobile-money-payment).
+Call it per checkout rather than caching the result — availability is per-account and changes without notice. An empty `providers` array means there is nothing to offer in that country.
 
 ## Authentication
 
-Either key works:
+Publishable or secret key:
 
 ```
 Authorization: Bearer pk_live_your_publishable_key
 ```
 
-Your **publishable** key is enough, so checkout can call this from the browser. Use your secret key when calling it server-side.
+The publishable key is accepted so checkout can call this from the browser.
 
 ## Query Parameters
 
 <ParamField query="country" type="string">
-  Two-letter ISO country code, e.g. `SN`. Omit to list every market.
+  Two-letter ISO country code, e.g. `SN`. Omit to list every country.
 </ParamField>
 
 ## Response
@@ -46,22 +42,22 @@ Your **publishable** key is enough, so checkout can call this from the browser. 
           Display name, e.g. `Orange Money`
         </ResponseField>
         <ResponseField name="country_code" type="string">
-          Market the wallet operates in
+          Country the wallet operates in
         </ResponseField>
         <ResponseField name="currency" type="string">
           Currency it settles in
         </ResponseField>
         <ResponseField name="flow" type="string">
-          What your checkout has to collect. `stk` — a phone number, then the prompt does the rest. `pre_otp` — a phone number **and** a code the customer generates by dialling `ussd_code`. `redirect` — a phone number, then send them to the `payment_url` the charge returns.
+          `stk`, `pre_otp` or `redirect` — what the checkout must collect. See [Rendering the right form](#rendering-the-right-form).
         </ResponseField>
         <ResponseField name="ussd_code" type="string | null">
-          What the customer dials to get their code, on `pre_otp` wallets. Null otherwise.
+          What the customer dials for their code. Set on `pre_otp` wallets, null otherwise.
         </ResponseField>
         <ResponseField name="min_amount" type="number | null">
-          Smallest chargeable amount, in whole units. Null where the wallet publishes none.
+          Smallest chargeable amount, in whole units. Null where the wallet publishes no limit.
         </ResponseField>
         <ResponseField name="max_amount" type="number | null">
-          Largest chargeable amount, in whole units. Null where the wallet publishes none.
+          Largest chargeable amount, in whole units. Null where the wallet publishes no limit.
         </ResponseField>
       </Expandable>
     </ResponseField>
@@ -70,15 +66,19 @@ Your **publishable** key is enough, so checkout can call this from the browser. 
 
 ## Rendering the right form
 
-`flow` is what your checkout should branch on:
+Branch the form on `flow`:
 
-| `flow` | Ask for | After you charge |
-|--------|---------|------------------|
-| `stk` | Phone number | Tell them to approve the prompt on their phone |
-| `pre_otp` | Phone number **and** the code from `ussd_code` | Tell them to approve the prompt |
-| `redirect` | Phone number | Send them to `payment_url` from the charge response |
+| `flow` | Collect | After charging |
+|--------|---------|----------------|
+| `stk` | Phone number | Prompt on the handset |
+| `pre_otp` | Phone number **and** the code from `ussd_code` | Prompt on the handset |
+| `redirect` | Phone number | Send the customer to `payment_url` |
 
-Ask for the `pre_otp` code on the same screen as the phone number. A customer who leaves to dial a USSD string mid-checkout will not reliably come back.
+Put the `pre_otp` code field on the same screen as the phone number — a customer who leaves to dial a USSD string mid-checkout may not come back.
+
+<Note>
+  `stk` and `redirect` collect the same field, so an `stk` wallet can still return `requires_action` with a `payment_url` — Orange Senegal does. Branch the **form** on `flow`; branch the **post-charge step** on `status` in the charge response.
+</Note>
 
 <RequestExample>
 ```bash curl
@@ -119,8 +119,8 @@ data = response.json()['data']
         "name": "Orange Money",
         "country_code": "SN",
         "currency": "XOF",
-        "flow": "pre_otp",
-        "ussd_code": "#144#391#",
+        "flow": "stk",
+        "ussd_code": null,
         "min_amount": null,
         "max_amount": null
       },
@@ -144,7 +144,7 @@ data = response.json()['data']
   "success": true,
   "message": "Mobile money providers retrieved",
   "data": {
-    "country": "BJ",
+    "country": "TG",
     "providers": []
   }
 }
