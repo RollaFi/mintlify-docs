@@ -1,0 +1,152 @@
+---
+title: 'List Mobile Money Providers'
+api: 'GET https://api.rollapay.com/mobile-money/providers'
+description: 'The mobile money wallets available in a country, and how each one collects authorisation'
+---
+
+## Overview
+
+The mobile money wallets your account can charge in a country. Build the checkout's wallet list from it instead of hardcoding one, and pass the `slug` back as `mobileMoney.provider` on [Mobile Money Payment](/api-reference/mobile-money-payment).
+
+Call it per checkout rather than caching the result — availability is per-account and changes without notice. An empty `providers` array means there is nothing to offer in that country.
+
+## Authentication
+
+Publishable or secret key:
+
+```
+Authorization: Bearer pk_live_your_publishable_key
+```
+
+The publishable key is accepted so checkout can call this from the browser.
+
+## Query Parameters
+
+<ParamField query="country" type="string">
+  Two-letter ISO country code, e.g. `SN`. Omit to list every country.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="country" type="string">
+      The country filtered on, or `null` when none was given
+    </ResponseField>
+    <ResponseField name="providers" type="array">
+      <Expandable title="properties">
+        <ResponseField name="slug" type="string">
+          Pass this as `mobileMoney.provider`
+        </ResponseField>
+        <ResponseField name="name" type="string">
+          Display name, e.g. `Orange Money`
+        </ResponseField>
+        <ResponseField name="country_code" type="string">
+          Country the wallet operates in
+        </ResponseField>
+        <ResponseField name="currency" type="string">
+          Currency it settles in
+        </ResponseField>
+        <ResponseField name="flow" type="string">
+          `stk`, `pre_otp` or `redirect` — what the checkout must collect. See [Rendering the right form](#rendering-the-right-form).
+        </ResponseField>
+        <ResponseField name="ussd_code" type="string | null">
+          What the customer dials for their code. Set on `pre_otp` wallets, null otherwise.
+        </ResponseField>
+        <ResponseField name="min_amount" type="number | null">
+          Smallest chargeable amount, in whole units. Null where the wallet publishes no limit.
+        </ResponseField>
+        <ResponseField name="max_amount" type="number | null">
+          Largest chargeable amount, in whole units. Null where the wallet publishes no limit.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Rendering the right form
+
+Branch the form on `flow`:
+
+| `flow` | Collect | After charging |
+|--------|---------|----------------|
+| `stk` | Phone number | Prompt on the handset |
+| `pre_otp` | Phone number **and** the code from `ussd_code` | Prompt on the handset |
+| `redirect` | Phone number | Send the customer to `payment_url` |
+
+Put the `pre_otp` code field on the same screen as the phone number — a customer who leaves to dial a USSD string mid-checkout may not come back.
+
+<Note>
+  `stk` and `redirect` collect the same field, so an `stk` wallet can still return `requires_action` with a `payment_url` — Orange Senegal does. Branch the **form** on `flow`; branch the **post-charge step** on `status` in the charge response.
+</Note>
+
+<RequestExample>
+```bash curl
+curl "https://api.rollapay.com/mobile-money/providers?country=SN" \
+  -H "Authorization: Bearer pk_live_your_publishable_key"
+```
+
+```javascript Node.js
+const response = await fetch(
+  'https://api.rollapay.com/mobile-money/providers?country=SN',
+  { headers: { Authorization: 'Bearer pk_live_your_publishable_key' } }
+);
+const { data } = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://api.rollapay.com/mobile-money/providers',
+    params={'country': 'SN'},
+    headers={'Authorization': 'Bearer sk_live_your_secret_key'},
+)
+data = response.json()['data']
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 Senegal
+{
+  "success": true,
+  "message": "Mobile money providers retrieved",
+  "data": {
+    "country": "SN",
+    "providers": [
+      {
+        "slug": "orange-senegal",
+        "name": "Orange Money",
+        "country_code": "SN",
+        "currency": "XOF",
+        "flow": "stk",
+        "ussd_code": null,
+        "min_amount": null,
+        "max_amount": null
+      },
+      {
+        "slug": "wave-senegal",
+        "name": "Wave",
+        "country_code": "SN",
+        "currency": "XOF",
+        "flow": "redirect",
+        "ussd_code": null,
+        "min_amount": null,
+        "max_amount": null
+      }
+    ]
+  }
+}
+```
+
+```json 200 Nothing To Offer
+{
+  "success": true,
+  "message": "Mobile money providers retrieved",
+  "data": {
+    "country": "TG",
+    "providers": []
+  }
+}
+```
+</ResponseExample>
