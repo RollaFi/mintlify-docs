@@ -11,7 +11,7 @@ Returns the banks payable for a currency, with the code that [name enquiry](/api
 Use this to populate a bank picker rather than hardcoding codes — the list changes as banks are added, merge, or are decommissioned.
 
 <Note>
-  Bank payouts are **NGN only**. The list is NIBSS, a Nigerian scheme. GHS, KES and ZMW pay out to mobile money, where the phone number is the identity and there is no bank to look up — for those, use `destination.type: "mobile_money"` and skip both this endpoint and name enquiry.
+  Bank payouts are **NGN only**. The list is NIBSS, a Nigerian scheme. GHS pays out to mobile money, where the phone number is the identity and there is no bank to look up — for that, use `destination.type: "mobile_money"` and skip both this endpoint and name enquiry.
 </Note>
 
 ## Authentication
