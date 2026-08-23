@@ -26,6 +26,12 @@ The publishable key is accepted so checkout can call this from the browser.
   Two-letter ISO country code, e.g. `SN`. Omit to list every country.
 </ParamField>
 
+<ParamField query="purpose" type="string" default="collection">
+  `collection` or `payout` — which direction the money is going.
+
+  Not a filter over one list but a choice between two. The directions are enabled separately and disagree: a wallet you can charge cannot always receive. Answering a withdrawal screen with the collection list offers wallets that will strand the payout after the balance is debited.
+</ParamField>
+
 ## Response
 
 <ResponseField name="data" type="object">
