@@ -183,4 +183,3 @@ curl_close($ch);
 1. The payout starts as `pending` and moves to `processing` once sent to the processor.
 2. A [webhook](/api-reference/webhooks) (`payout.completed` or `payout.failed`) fires when it is finalized.
 3. You can also poll [Verify Payout](/api-reference/verify-payout).
-4. If a payout fails, the funds are credited back to your wallet automatically.

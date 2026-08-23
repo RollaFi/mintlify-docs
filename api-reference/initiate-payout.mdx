@@ -159,4 +159,3 @@ After initiating a payout:
 1. The payout status starts as `pending` and moves to `processing` once sent to the processor.
 2. You will receive a [webhook](/api-reference/webhooks) notification (`payout.completed` or `payout.failed`) when the payout is finalized.
 3. You can also poll the [Verify Payout](/api-reference/verify-payout) endpoint to check the status.
-4. If a payout fails, funds are automatically credited back to your wallet.
