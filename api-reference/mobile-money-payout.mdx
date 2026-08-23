@@ -8,13 +8,17 @@ description: 'Send money to a mobile money wallet'
 
 Send money from your wallet to a mobile money wallet across Africa.
 
-**Supported currencies:** `GHS` (Ghana)
+**Supported currencies:** `GHS` (Ghana) and `XOF` (Senegal)
 
 Mobile money is a **single call**. There is no name enquiry step and no bank list: the phone number is the identity, so there is no account to resolve first.
 
 <Note>
-  This is the difference from [Bank Transfer Payout](/api-reference/bank-transfer-payout), which requires a `name_enquiry_ref`. Sending `bank_code`, `account_name` or `name_enquiry_ref` here is rejected — a mobile money destination takes a phone number and nothing else.
+  This is the difference from [Bank Transfer Payout](/api-reference/bank-transfer-payout), which requires a `name_enquiry_ref`. Sending `bank_code`, `account_name` or `name_enquiry_ref` here is rejected — a mobile money destination is a phone number and, in XOF, the wallet it belongs to.
 </Note>
+
+<Warning>
+  **XOF payouts must name the wallet.** The CFA franc is legal tender in eight countries, so a phone number does not say which one the money is going to — and payouts are priced by country. Send `destination.provider`; without it the payout is rejected before your wallet is debited. Ghana needs nothing extra, as the network is resolved from the number.
+</Warning>
 
 Common parameters — `amount`, `currency`, `narration`, `reference`, `fee_source` — are documented on [Initiate Payout](/api-reference/initiate-payout).
 
@@ -35,12 +39,28 @@ Authorization: Bearer sk_live_your_secret_key
 </ParamField>
 
 <ParamField body="destination.phone_number" type="string" required>
-  The mobile money number in E.164 format without a leading `+` (e.g. `233501234567` for Ghana). Between 9 and 15 digits.
+  The mobile money number in E.164 format without a leading `+` (e.g. `233501234567` for Ghana, `221786175702` for Senegal). Between 9 and 15 digits.
 
   <Warning>
     Double-check this. A mobile money transfer is delivered on the number alone — there is no name to confirm it against, so a wrong digit reaches whoever holds that number, and the money only returns if the processor rejects it.
   </Warning>
 </ParamField>
+
+<ParamField body="destination.provider" type="string">
+  Which wallet to pay, e.g. `orange-senegal`. **Required in XOF.** Get the current list from [List Mobile Money Providers](/api-reference/mobile-money-providers) with `purpose=payout` — a wallet that can be charged cannot always receive, so the payout list is not the collection list.
+</ParamField>
+
+<ParamField body="destination.network" type="string">
+  Which network inside the wallet, where one fronts several. Only some do; the providers endpoint returns them under `networks`, and a payout to such a wallet is rejected without one.
+</ParamField>
+
+<ParamField body="destination.country" type="string">
+  Destination country, ISO 3166-1 alpha-2. Rarely needed — a wallet exists in one country, so `orange-senegal` already says Senegal. Send it where the wallet's name does not settle the question. If it disagrees with the wallet, the payout is rejected rather than one of them being preferred.
+</ParamField>
+
+## Amounts in XOF
+
+The West African CFA franc has no subunit, so **amounts must be whole numbers** — a decimal is rejected rather than rounded. The minimum payout is **100 XOF**; wallets publish their own floors and caps, which [List Mobile Money Providers](/api-reference/mobile-money-providers) returns as `min_amount` and `max_amount`.
 
 ## Example
 
@@ -50,11 +70,12 @@ curl -X POST "https://api.rollapay.com/payout/initiate" \
   -H "Authorization: Bearer sk_live_your_secret_key" \
   -H "Content-Type: application/json" \
   -d '{
-    "amount": 50,
-    "currency": "GHS",
+    "amount": 5000,
+    "currency": "XOF",
     "destination": {
       "type": "mobile_money",
-      "phone_number": "233501234567"
+      "phone_number": "221786175702",
+      "provider": "orange-senegal"
     },
     "narration": "Commission payout",
     "reference": "COM_JAN_014"
@@ -150,7 +171,10 @@ curl_close($ch);
 
 | Message | Meaning |
 |---------|---------|
-| `No active GHS wallet found` | You have no active wallet in that currency. |
+| `No active <currency> wallet found` | You have no active wallet in that currency. |
+| `provider is required for XOF mobile money payouts` | A CFA payout must name the wallet. See `destination.provider` above. |
+| `Destination mismatch: <provider> is a <country> wallet, but country was given as <other>` | `provider` and `country` disagree about where the money is going. Send one or the other. |
+| `Minimum payout amount is XOF 100` | Below the floor for the currency. |
 | `Insufficient wallet balance` | Under the default `fee_source: "balance"`, you need `amount + fee`. |
 | `No active payout processor found for currency <code>` | No processor is configured for that currency. The payout fails and the wallet is credited back. |
 

@@ -15,7 +15,7 @@ The two differ in more than their fields, so each has its own page:
     **NGN.** Three steps — list banks, resolve the account, then pay. Requires a `name_enquiry_ref`.
   </Card>
   <Card title="Mobile Money Payout" icon="mobile" href="/api-reference/mobile-money-payout">
-    **GHS** A single call. The phone number is the identity, so there is nothing to resolve.
+    **GHS, XOF.** A single call. The phone number is the identity, so there is nothing to resolve — though XOF also names the wallet.
   </Card>
 </CardGroup>
 
@@ -37,7 +37,7 @@ This page documents what both share.
 </ParamField>
 
 <ParamField body="currency" type="string" required>
-  ISO 4217 currency code. Must match a wallet you have, and the method: `NGN` for bank transfers, `GHS` for mobile money.
+  ISO 4217 currency code. Must match a wallet you have, and the method: `NGN` for bank transfers, `GHS` or `XOF` for mobile money.
 </ParamField>
 
 <ParamField body="destination" type="object" required>
