@@ -6,7 +6,7 @@ description: 'Check the status of a payout'
 
 ## Overview
 
-Retrieve the current status and details of a payout using its reference. Use this to confirm a payout has been completed, or to check on a pending payout.
+Retrieve the current status and details of a payout using its Rolla reference or the `reference` you sent when initiating it. Use this to confirm a payout has been completed, or to check on a pending payout.
 
 ## Authentication
 
@@ -21,7 +21,7 @@ No signature is required for GET requests — only the secret key.
 ## Path Parameters
 
 <ParamField path="reference" type="string" required>
-  The payout reference returned when the payout was initiated (e.g., `WDR_A1B2C3D4E5F6`).
+  Either the payout reference returned when the payout was initiated (e.g., `WDR_A1B2C3D4E5F6`), or your own `reference` from the initiate request.
 </ParamField>
 
 <RequestExample>
