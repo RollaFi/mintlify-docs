@@ -1,0 +1,158 @@
+---
+title: 'Submit PIN or OTP'
+api: 'POST https://api.rollapay.com/transaction/{reference}/pin'
+description: 'Complete a card payment that is waiting for the card PIN or a one-time code'
+---
+
+## Overview
+
+Some cards need the customer's PIN, a one-time code (OTP) from their bank, or both before a payment completes. When that happens, [Card Payment](/api-reference/card-payment) returns `status: "requires_action"` with `auth_mode` set to `pin` or `otp`. Collect the value from the customer and send it here.
+
+| `auth_mode` | Endpoint | Body |
+|-------------|----------|------|
+| `pin` | `POST /transaction/{reference}/pin` | `{ "pin": "1234" }` |
+| `otp` | `POST /transaction/{reference}/otp` | `{ "otp": "123456" }` |
+
+The response tells you what happens next, in the same shape as Card Payment. A PIN is often followed by an OTP, so keep following `auth_mode` until `status` is `successful` or `failed`.
+
+<Warning>
+  Send the PIN or OTP straight from the customer's input to this endpoint. Never log or store it.
+</Warning>
+
+## Authentication
+
+```
+Authorization: Bearer sk_live_your_secret_key
+```
+
+Use the key for the same mode as the payment: a `sk_test_*` key cannot complete a live payment, or the reverse.
+
+## Path Parameters
+
+<ParamField path="reference" type="string" required>
+  The `reference` returned when the payment was initiated.
+</ParamField>
+
+## Request Body
+
+<ParamField body="pin" type="string">
+  The card PIN, 4 digits. Send on the `/pin` endpoint.
+</ParamField>
+
+<ParamField body="otp" type="string">
+  The one-time code from the customer's bank, 4 to 8 digits. Send on the `/otp` endpoint.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="reference" type="string">
+      The payment reference.
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      `requires_action` (another step is needed), `successful`, `failed`, or `processing` (the bank has not confirmed yet; check with [Verify Transaction](/api-reference/verify-transaction)).
+    </ResponseField>
+    <ResponseField name="auth_mode" type="string">
+      The next step when `status` is `requires_action`: `pin`, `otp` or `3ds`.
+    </ResponseField>
+    <ResponseField name="payment_url" type="string">
+      Where to send the customer when `auth_mode` is `3ds`.
+    </ResponseField>
+    <ResponseField name="failure_reason" type="string | null">
+      Why the payment was refused, when `status` is `failed`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash PIN
+curl -X POST "https://api.rollapay.com/transaction/ORD-12345/pin" \
+  -H "Authorization: Bearer sk_test_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{ "pin": "1234" }'
+```
+
+```bash OTP
+curl -X POST "https://api.rollapay.com/transaction/ORD-12345/otp" \
+  -H "Authorization: Bearer sk_test_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{ "otp": "123456" }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 OTP Needed Next
+{
+  "success": true,
+  "message": "PIN submitted",
+  "data": {
+    "reference": "ORD-12345",
+    "status": "requires_action",
+    "auth_mode": "otp"
+  }
+}
+```
+
+```json 200 Successful
+{
+  "success": true,
+  "message": "OTP submitted",
+  "data": {
+    "reference": "ORD-12345",
+    "status": "successful"
+  }
+}
+```
+
+```json 200 Wrong PIN
+{
+  "success": true,
+  "message": "PIN submitted",
+  "data": {
+    "reference": "ORD-12345",
+    "status": "failed",
+    "failure_reason": "Invalid pin provided."
+  }
+}
+```
+
+```json 400 Wrong Step
+{
+  "success": false,
+  "message": "This payment is not waiting for an OTP"
+}
+```
+
+```json 404 Not Found
+{
+  "success": false,
+  "message": "Transaction not found"
+}
+```
+
+```json 409 Already In Progress
+{
+  "success": false,
+  "message": "This payment is already being authorised. Wait for the result before trying again."
+}
+```
+</ResponseExample>
+
+## Things to know
+
+- **One attempt per step.** A wrong PIN or OTP fails the payment. The customer starts again with a new payment; you can reuse the same `reference`.
+- **Resubmitting is safe.** Sending a value again after the payment has finished returns the outcome; nothing is charged twice. Sending it while the first submission is still being processed returns `409`.
+- **Wait for confirmation.** If `status` comes back `processing`, the bank has not answered yet. Do not retry; check [Verify Transaction](/api-reference/verify-transaction) or wait for the webhook.
+
+## Test cards
+
+With a `sk_test_*` key:
+
+| Card number | Steps | Values |
+|-------------|-------|--------|
+| `5555555555554444` | PIN, then OTP | PIN `1234`, OTP `123456` |
+| `4242424242424242` | OTP | OTP `123456` |
+| `5200000000001096` | 3D Secure | Complete the challenge at `payment_url` |
+
+Use an amount of at least ₦100 and any future expiry date and CVV.

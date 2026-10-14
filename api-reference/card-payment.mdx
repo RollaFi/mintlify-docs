@@ -133,14 +133,14 @@ Authorization: Bearer sk_live_your_secret_key
     <ResponseField name="status" type="string">
       Transaction status: `requires_action`, `successful`, or `failed`
     </ResponseField>
+    <ResponseField name="auth_mode" type="string">
+      What the customer must do next when `status` is `requires_action`: `3ds` (send them to `payment_url`), `pin` (collect their card PIN) or `otp` (collect the one-time code their bank sent). See [Submit PIN or OTP](/api-reference/submit-card-auth).
+    </ResponseField>
     <ResponseField name="payment_url" type="string">
-      URL to redirect the customer for payment authentication (3D Secure, etc.). Present when `next_action` is `redirect`.
+      Where to send the customer to complete 3D Secure. Present when `auth_mode` is `3ds`.
     </ResponseField>
-    <ResponseField name="next_action" type="string">
-      Indicates the next action required when `status` is `requires_action`. Possible values: `redirect` (redirect to payment_url), `otp` (submit OTP), `pin` (submit PIN)
-    </ResponseField>
-    <ResponseField name="message" type="string">
-      Additional message providing context (e.g., "Please enter the OTP sent to your phone")
+    <ResponseField name="failure_reason" type="string | null">
+      Why the payment was refused. Present when `status` is `failed`.
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -324,8 +324,8 @@ $result = json_decode($response, true);
   "data": {
     "reference": "ORD-12345",
     "status": "requires_action",
-    "next_action": "redirect",
-    "payment_url": "https://checkout.rolla.io/pay?ref=ROLLA-G-123456789-ABC123"
+    "auth_mode": "3ds",
+    "payment_url": "https://3ds.rollapay.com/squad?ref=ROLLA-SQ-1791993368338-B776E789"
   }
 }
 ```
@@ -333,12 +333,11 @@ $result = json_decode($response, true);
 ```json 200 Requires OTP
 {
   "success": true,
-  "message": "Please enter the OTP sent to your phone",
+  "message": "Transaction initiated",
   "data": {
     "reference": "ORD-12345",
     "status": "requires_action",
-    "next_action": "otp",
-    "payment_url": null
+    "auth_mode": "otp"
   }
 }
 ```
@@ -346,12 +345,23 @@ $result = json_decode($response, true);
 ```json 200 Requires PIN
 {
   "success": true,
-  "message": "Please enter your card PIN",
+  "message": "Transaction initiated",
   "data": {
     "reference": "ORD-12345",
     "status": "requires_action",
-    "next_action": "pin",
-    "payment_url": null
+    "auth_mode": "pin"
+  }
+}
+```
+
+```json 200 Failed
+{
+  "success": true,
+  "message": "Transaction initiated",
+  "data": {
+    "reference": "ORD-12345",
+    "status": "failed",
+    "failure_reason": "Minimum amount is 100 Naira"
   }
 }
 ```
@@ -410,9 +420,9 @@ Use these test cards with your `sk_test_*` API key in sandbox mode:
 
 ## Next Steps
 
-After initiating a card payment, check the `status` and `next_action` fields to determine what to do next:
+After initiating a card payment, check the `status` and `auth_mode` fields to determine what to do next:
 
-### `next_action` is `redirect`
+### `auth_mode` is `3ds`
 1. Redirect the customer to `payment_url`
 2. The customer completes authentication (3D Secure, etc.)
 3. Customer is redirected back to your `callbackUrl`
@@ -422,13 +432,11 @@ After initiating a card payment, check the `status` and `next_action` fields to 
 The transaction completed immediately without additional authentication.
 1. Use the [Verify Transaction](/api-reference/verify-transaction) endpoint to confirm the final status
 
-### `next_action` is `otp`
-1. Display an OTP input form to the customer
-2. Submit the OTP using the Submit OTP endpoint *(coming soon)*
-3. Use the [Verify Transaction](/api-reference/verify-transaction) endpoint to confirm the final status
-
-### `next_action` is `pin`
-1. Display a PIN input form to the customer
-2. Submit the PIN using the Submit PIN endpoint *(coming soon)*
-3. The response may return another `next_action` (e.g., `otp`) — handle accordingly
+### `auth_mode` is `pin` or `otp`
+1. Ask the customer for their card PIN, or for the code their bank sent them
+2. Send it with [Submit PIN or OTP](/api-reference/submit-card-auth)
+3. Handle the response the same way: it may ask for the next step (a PIN is often followed by an OTP)
 4. Use the [Verify Transaction](/api-reference/verify-transaction) endpoint to confirm the final status
+
+### `status` is `failed`
+The payment was refused. `failure_reason` says why.

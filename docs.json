@@ -69,6 +69,7 @@
                   "api-reference/test-cards",
                   "api-reference/initiate-payment",
                   "api-reference/card-payment",
+              "api-reference/submit-card-auth",
                   "api-reference/bank-transfer-payment",
                   "api-reference/mobile-money-payment",
                   "api-reference/mobile-money-providers",
