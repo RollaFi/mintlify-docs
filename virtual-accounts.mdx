@@ -33,7 +33,8 @@ Use virtual accounts when customers pay you repeatedly: wallet top-ups, savings,
 
 ## Requirements
 
-- **One account per customer.** Creating an account again for the same customer email returns the existing account rather than opening a second one.
+- **One account per customer.** Creating an account for a customer email that already has one is refused with `409`.
+- **Unique reference.** Your `reference` can be used for only one account; reusing it is refused with `409`.
 - **BVN is optional.** If you send the customer's 11-digit BVN, it is passed to the bank when the account is opened. Rolla Pay keeps only its last four digits.
 - **Test mode.** With a test key, the API returns a test account number that is not opened at any bank, so no real transfers can be made to it.
 
