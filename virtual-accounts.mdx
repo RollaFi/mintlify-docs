@@ -1,11 +1,11 @@
 ---
 title: 'Virtual Accounts'
-description: 'Give each of your customers a permanent bank account number they can pay into at any time'
+description: 'Give each of your customers a static bank account number they can pay into at any time'
 ---
 
 ## Overview
 
-A virtual account is a permanent Nigerian bank account number that belongs to one of your customers. Your customer can transfer any amount to it, as often as they like, from any Nigerian bank. Every transfer is collected for you automatically and settled like any other payment.
+A virtual account is a **static** Nigerian bank account number that belongs to one of your customers. Its number never changes, so your customer can transfer any amount to it, as often as they like, from any Nigerian bank. Every transfer is collected for you automatically and settled like any other payment.
 
 Use virtual accounts when customers pay you repeatedly: wallet top-ups, savings, rent and school fees, or B2B customers who pay invoices by transfer.
 
@@ -13,11 +13,13 @@ Use virtual accounts when customers pay you repeatedly: wallet top-ups, savings,
   Virtual accounts are available to **Nigerian businesses** collecting **NGN**.
 </Note>
 
-## Virtual accounts vs bank transfer checkout
+## Static vs dynamic accounts
 
-| | Bank transfer checkout | Virtual account |
+Rolla Pay gives you two kinds of account for bank transfers. A **dynamic** account is created for one bank transfer checkout and closes after it. A **static** account is a virtual account that belongs to one customer and keeps working.
+
+| | Dynamic account (bank transfer checkout) | Static account (virtual account) |
 |---|---|---|
-| Account number | New one for every payment | One permanent number per customer |
+| Account number | New one for every payment | The same number every time |
 | Amount | Exact amount of the order | Any amount |
 | Expiry | Expires after 30 minutes | Never expires |
 | Created by | [`POST /transaction/initiate`](/api-reference/bank-transfer-payment) | [`POST /collections/virtual-accounts`](/api-reference/virtual-accounts) or the dashboard |

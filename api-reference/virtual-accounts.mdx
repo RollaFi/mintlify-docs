@@ -1,11 +1,11 @@
 ---
 title: 'Virtual Accounts'
-description: 'Create permanent bank accounts for your customers and track the transfers into them'
+description: 'Create static bank accounts for your customers and track the transfers into them'
 ---
 
 ## Overview
 
-A virtual account is a permanent NGN bank account for one of your customers. Every transfer into it becomes a successful `bank_transfer` transaction for you. See the [Virtual Accounts guide](/virtual-accounts) for how they work.
+A virtual account is a **static** NGN bank account for one of your customers: its number never changes, unlike the **dynamic** account created for each [bank transfer checkout](/api-reference/bank-transfer-payment). Every transfer into it becomes a successful `bank_transfer` transaction for you. See the [Virtual Accounts guide](/virtual-accounts) for how they work.
 
 <Note>
   Available to Nigerian businesses only. Requests from businesses in other countries return `400` with code `VIRTUAL_ACCOUNT_UNSUPPORTED_COUNTRY`.
@@ -22,7 +22,7 @@ Authorization: Bearer sk_live_your_secret_key
 ## Create a Virtual Account
 
 <Card title="POST /collections/virtual-accounts" icon="building-columns">
-  Open a permanent account for a customer
+  Open a static account for a customer
 </Card>
 
 A new account returns `201`. A customer can have several accounts, but each `reference` can be used only once: reusing one is refused with `409`, so look that account up with [Get a Virtual Account](#get-a-virtual-account) instead.
