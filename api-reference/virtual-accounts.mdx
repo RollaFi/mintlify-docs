@@ -25,7 +25,7 @@ Authorization: Bearer sk_live_your_secret_key
   Open a permanent account for a customer
 </Card>
 
-A new account returns `201`. Each customer can have one account, and each `reference` can be used once, so a request that repeats either is refused with `409`; look the account up with [Get a Virtual Account](#get-a-virtual-account) instead.
+A new account returns `201`. A customer can have several accounts, but each `reference` can be used only once: reusing one is refused with `409`, so look that account up with [Get a Virtual Account](#get-a-virtual-account) instead.
 
 ### Request Body
 
@@ -33,7 +33,7 @@ A new account returns `201`. Each customer can have one account, and each `refer
   The customer the account belongs to
   <Expandable title="properties">
     <ParamField body="email" type="string" required>
-      Customer's email address. Identifies the customer: one account per email.
+      Customer's email address. Identifies the customer; one customer can have several accounts.
     </ParamField>
     <ParamField body="first_name" type="string" required>
       Customer's first name
@@ -142,15 +142,6 @@ print(response.json()["data"]["account_number"])
 }
 ```
 
-```json 409 Customer already has an account
-{
-  "success": false,
-  "status": 409,
-  "code": "VIRTUAL_ACCOUNT_EXISTS",
-  "message": "This customer already has a virtual account (VA_2T5RLBWBQ8MWY3)"
-}
-```
-
 ```json 400 Invalid details
 {
   "success": false,
@@ -192,12 +183,20 @@ print(response.json()["data"]["account_number"])
   Search by account number, account name, reference, your reference or customer email
 </ParamField>
 
+<ParamField query="merchant_reference" type="string">
+  Only the account with exactly this `reference` (the one you sent when creating it)
+</ParamField>
+
+<ParamField query="customer_email" type="string">
+  Only this customer's accounts. Exact match, ignoring case.
+</ParamField>
+
 <ParamField query="status" type="string">
   Filter by `active` or `inactive`
 </ParamField>
 
 ```bash
-curl "https://api.rollapay.com/virtual-accounts?page=1&limit=20" \
+curl "https://api.rollapay.com/virtual-accounts?customer_email=ada@example.com" \
   -H "Authorization: Bearer sk_live_your_secret_key"
 ```
 
