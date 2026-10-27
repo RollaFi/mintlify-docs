@@ -44,6 +44,9 @@ Creating an account for a customer who already has one returns the existing acco
     <ParamField body="phone" type="string">
       Customer's phone number
     </ParamField>
+    <ParamField body="bvn" type="string">
+      Customer's 11-digit Bank Verification Number. Optional; when sent it is passed to the bank to open the account, and only the last four digits are stored.
+    </ParamField>
   </Expandable>
 </ParamField>
 
@@ -65,7 +68,8 @@ curl -X POST "https://api.rollapay.com/virtual-accounts" \
       "email": "ada@example.com",
       "first_name": "Ada",
       "last_name": "Obi",
-      "phone": "08031234567"
+      "phone": "08031234567",
+      "bvn": "22222222222"
     },
     "reference": "cust-001"
   }'
@@ -84,6 +88,7 @@ const response = await fetch('https://api.rollapay.com/virtual-accounts', {
       first_name: 'Ada',
       last_name: 'Obi',
       phone: '08031234567',
+      bvn: '22222222222',
     },
     reference: 'cust-001',
   }),
@@ -104,6 +109,7 @@ response = requests.post(
             "first_name": "Ada",
             "last_name": "Obi",
             "phone": "08031234567",
+            "bvn": "22222222222",
         },
         "reference": "cust-001",
     },
@@ -136,6 +142,7 @@ print(response.json()["data"]["account_number"])
       "name": "Ada Obi",
       "phone": "08031234567"
     },
+    "bvn_last4": "2222",
     "total_transactions": 0,
     "total_received": 0,
     "last_transaction_at": null,
@@ -149,7 +156,7 @@ print(response.json()["data"]["account_number"])
 {
   "success": false,
   "status": 400,
-  "message": "The account could not be opened with these customer details. Check the customer's first name, last name, email and phone number."
+  "message": "The account could not be opened with these customer details. Check the customer's BVN, first name, last name and phone number."
 }
 ```
 </ResponseExample>
@@ -168,6 +175,7 @@ print(response.json()["data"]["account_number"])
     <ResponseField name="mode" type="string">`test` or `live`</ResponseField>
     <ResponseField name="merchant_reference" type="string">Your `reference`, if you sent one</ResponseField>
     <ResponseField name="customer" type="object">The customer the account belongs to</ResponseField>
+    <ResponseField name="bvn_last4" type="string">Last four digits of the BVN used, or `null` if none was sent</ResponseField>
     <ResponseField name="total_transactions" type="number">Number of transfers received</ResponseField>
     <ResponseField name="total_received" type="number">Total amount received, in NGN</ResponseField>
     <ResponseField name="last_transaction_at" type="string">When the last transfer arrived</ResponseField>
