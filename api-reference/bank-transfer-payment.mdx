@@ -6,7 +6,11 @@ description: 'Generate a virtual account for customers to pay via bank transfer'
 
 ## Overview
 
-Initiate a bank transfer payment by generating a temporary virtual account. The customer transfers the exact amount from their banking app, and the payment is confirmed automatically once the transfer is received.
+Initiate a bank transfer payment by generating a **dynamic** virtual account: a new account number for this one payment, which expires after the timeout. The customer transfers the exact amount from their banking app, and the payment is confirmed automatically once the transfer is received.
+
+<Tip>
+  To give a customer a **static** account number they can pay into again and again, use [Virtual Accounts](/api-reference/virtual-accounts) instead.
+</Tip>
 
 No card details are needed — just specify `bank_transfer` as the channel and provide customer information.
 
