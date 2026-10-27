@@ -20,12 +20,12 @@ Use virtual accounts when customers pay you repeatedly: wallet top-ups, savings,
 | Account number | New one for every payment | One permanent number per customer |
 | Amount | Exact amount of the order | Any amount |
 | Expiry | Expires after 30 minutes | Never expires |
-| Created by | [`POST /transaction/initiate`](/api-reference/bank-transfer-payment) | [`POST /virtual-accounts`](/api-reference/virtual-accounts) or the dashboard |
+| Created by | [`POST /transaction/initiate`](/api-reference/bank-transfer-payment) | [`POST /collections/virtual-accounts`](/api-reference/virtual-accounts) or the dashboard |
 | Best for | One-off checkout | Repeat payments from the same customer |
 
 ## How It Works
 
-1. **Create the account.** Call `POST /virtual-accounts` with your customer's name and email (and BVN, if you have it), or create it from **Virtual Accounts** on your dashboard. You get back a bank name and account number.
+1. **Create the account.** Call `POST /collections/virtual-accounts` with your customer's name and email (and BVN, if you have it), or create it from **Virtual Accounts** on your dashboard. You get back a bank name and account number.
 2. **Show it to your customer.** Display the account number in your app. It stays the same for that customer.
 3. **Your customer transfers.** They send money to the account from any bank app, in any amount.
 4. **You're notified.** Each transfer creates a successful transaction and sends you a `payment.success` webhook naming the virtual account it was paid into.
