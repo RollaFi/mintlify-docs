@@ -21,7 +21,7 @@ Authorization: Bearer sk_live_your_secret_key
 
 ## Create a Virtual Account
 
-<Card title="POST /virtual-accounts" icon="building-columns">
+<Card title="POST /collections/virtual-accounts" icon="building-columns">
   Open a permanent account for a customer
 </Card>
 
@@ -29,25 +29,24 @@ A new account returns `201`. A customer can have several accounts, but each `ref
 
 ### Request Body
 
-<ParamField body="customer" type="object" required>
-  The customer the account belongs to
-  <Expandable title="properties">
-    <ParamField body="email" type="string" required>
-      Customer's email address. Identifies the customer; one customer can have several accounts.
-    </ParamField>
-    <ParamField body="first_name" type="string" required>
-      Customer's first name
-    </ParamField>
-    <ParamField body="last_name" type="string" required>
-      Customer's last name
-    </ParamField>
-    <ParamField body="phone" type="string">
-      Customer's phone number
-    </ParamField>
-    <ParamField body="bvn" type="string">
-      Customer's 11-digit Bank Verification Number. Optional; when sent it is passed to the bank to open the account, and only the last four digits are stored.
-    </ParamField>
-  </Expandable>
+<ParamField body="email" type="string" required>
+  Customer's email address. Identifies the customer; one customer can have several accounts.
+</ParamField>
+
+<ParamField body="first_name" type="string" required>
+  Customer's first name
+</ParamField>
+
+<ParamField body="last_name" type="string" required>
+  Customer's last name
+</ParamField>
+
+<ParamField body="phone" type="string">
+  Customer's phone number
+</ParamField>
+
+<ParamField body="bvn" type="string">
+  Customer's 11-digit Bank Verification Number. Optional; when sent it is passed to the bank to open the account, and only the last four digits are stored.
 </ParamField>
 
 <ParamField body="reference" type="string">
@@ -60,36 +59,32 @@ A new account returns `201`. A customer can have several accounts, but each `ref
 
 <RequestExample>
 ```bash cURL
-curl -X POST "https://api.rollapay.com/virtual-accounts" \
+curl -X POST "https://api.rollapay.com/collections/virtual-accounts" \
   -H "Authorization: Bearer sk_live_your_secret_key" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer": {
-      "email": "ada@example.com",
-      "first_name": "Ada",
-      "last_name": "Obi",
-      "phone": "08031234567",
-      "bvn": "22222222222"
-    },
+    "email": "ada@example.com",
+    "first_name": "Ada",
+    "last_name": "Obi",
+    "phone": "08031234567",
+    "bvn": "22222222222",
     "reference": "cust-001"
   }'
 ```
 
 ```javascript Node.js
-const response = await fetch('https://api.rollapay.com/virtual-accounts', {
+const response = await fetch('https://api.rollapay.com/collections/virtual-accounts', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer sk_live_your_secret_key',
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
-    customer: {
-      email: 'ada@example.com',
-      first_name: 'Ada',
-      last_name: 'Obi',
-      phone: '08031234567',
-      bvn: '22222222222',
-    },
+    email: 'ada@example.com',
+    first_name: 'Ada',
+    last_name: 'Obi',
+    phone: '08031234567',
+    bvn: '22222222222',
     reference: 'cust-001',
   }),
 });
@@ -101,16 +96,14 @@ console.log(data.account_number);
 import requests
 
 response = requests.post(
-    "https://api.rollapay.com/virtual-accounts",
+    "https://api.rollapay.com/collections/virtual-accounts",
     headers={"Authorization": "Bearer sk_live_your_secret_key"},
     json={
-        "customer": {
-            "email": "ada@example.com",
-            "first_name": "Ada",
-            "last_name": "Obi",
-            "phone": "08031234567",
-            "bvn": "22222222222",
-        },
+        "email": "ada@example.com",
+        "first_name": "Ada",
+        "last_name": "Obi",
+        "phone": "08031234567",
+        "bvn": "22222222222",
         "reference": "cust-001",
     },
 )
@@ -165,7 +158,7 @@ print(response.json()["data"]["account_number"])
 
 ## List Virtual Accounts
 
-<Card title="GET /virtual-accounts" icon="list">
+<Card title="GET /collections/virtual-accounts" icon="list">
   List your virtual accounts, newest first
 </Card>
 
@@ -196,7 +189,7 @@ print(response.json()["data"]["account_number"])
 </ParamField>
 
 ```bash
-curl "https://api.rollapay.com/virtual-accounts?customer_email=ada@example.com" \
+curl "https://api.rollapay.com/collections/virtual-accounts?customer_email=ada@example.com" \
   -H "Authorization: Bearer sk_live_your_secret_key"
 ```
 
@@ -221,12 +214,12 @@ curl "https://api.rollapay.com/virtual-accounts?customer_email=ada@example.com" 
 
 ## Get a Virtual Account
 
-<Card title="GET /virtual-accounts/:reference" icon="magnifying-glass">
+<Card title="GET /collections/virtual-accounts/:reference" icon="magnifying-glass">
   Fetch one account by its `reference`
 </Card>
 
 ```bash
-curl "https://api.rollapay.com/virtual-accounts/VA_2T5RLBWBQ8MWY3" \
+curl "https://api.rollapay.com/collections/virtual-accounts/VA_2T5RLBWBQ8MWY3" \
   -H "Authorization: Bearer sk_live_your_secret_key"
 ```
 
@@ -234,7 +227,7 @@ Returns the same object as [Create](#create-a-virtual-account). Returns `404` if
 
 ## List Transactions for a Virtual Account
 
-<Card title="GET /virtual-accounts/:reference/transactions" icon="arrow-down-left">
+<Card title="GET /collections/virtual-accounts/:reference/transactions" icon="arrow-down-left">
   Transfers received into an account, newest first
 </Card>
 
@@ -249,7 +242,7 @@ Returns the same object as [Create](#create-a-virtual-account). Returns `404` if
 </ParamField>
 
 ```bash
-curl "https://api.rollapay.com/virtual-accounts/VA_2T5RLBWBQ8MWY3/transactions" \
+curl "https://api.rollapay.com/collections/virtual-accounts/VA_2T5RLBWBQ8MWY3/transactions" \
   -H "Authorization: Bearer sk_live_your_secret_key"
 ```
 
