@@ -41,6 +41,12 @@
                 ]
               },
               {
+                "group": "Virtual Accounts",
+                "pages": [
+                  "virtual-accounts"
+                ]
+              },
+              {
                 "group": "Payouts",
                 "pages": [
                   "payouts"
@@ -78,6 +84,12 @@
                   "api-reference/verify-transaction",
                   "api-reference/refunds",
                   "api-reference/response-codes"
+                ]
+              },
+              {
+                "group": "Virtual Accounts",
+                "pages": [
+                  "api-reference/virtual-accounts"
                 ]
               },
               {

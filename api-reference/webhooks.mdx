@@ -91,6 +91,8 @@ All webhooks are sent as `POST` requests with a JSON body.
 
 For bank transfer webhooks, the `payment_source` object contains sender details instead of `cardBrand`/`cardLast4`.
 
+A transfer into a [virtual account](/api-reference/virtual-accounts#webhook) also sends `payment.success`, with a `virtualAccount` object naming the account and the sender.
+
 ### Payload Fields
 
 <ResponseField name="event" type="string">

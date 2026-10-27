@@ -1,0 +1,52 @@
+---
+title: 'Virtual Accounts'
+description: 'Give each of your customers a permanent bank account number they can pay into at any time'
+---
+
+## Overview
+
+A virtual account is a permanent Nigerian bank account number that belongs to one of your customers. Your customer can transfer any amount to it, as often as they like, from any Nigerian bank. Every transfer is collected for you automatically and settled like any other payment.
+
+Use virtual accounts when customers pay you repeatedly: wallet top-ups, savings, rent and school fees, or B2B customers who pay invoices by transfer.
+
+<Note>
+  Virtual accounts are available to **Nigerian businesses** collecting **NGN**.
+</Note>
+
+## Virtual accounts vs bank transfer checkout
+
+| | Bank transfer checkout | Virtual account |
+|---|---|---|
+| Account number | New one for every payment | One permanent number per customer |
+| Amount | Exact amount of the order | Any amount |
+| Expiry | Expires after 30 minutes | Never expires |
+| Created by | [`POST /transaction/initiate`](/api-reference/bank-transfer-payment) | [`POST /virtual-accounts`](/api-reference/virtual-accounts) or the dashboard |
+| Best for | One-off checkout | Repeat payments from the same customer |
+
+## How It Works
+
+1. **Create the account.** Call `POST /virtual-accounts` with your customer's name and email, or create it from **Virtual Accounts** on your dashboard. You get back a bank name and account number.
+2. **Show it to your customer.** Display the account number in your app. It stays the same for that customer.
+3. **Your customer transfers.** They send money to the account from any bank app, in any amount.
+4. **You're notified.** Each transfer creates a successful transaction and sends you a `payment.success` webhook naming the virtual account it was paid into.
+5. **Settlement.** The amount, less your bank-transfer fee, is settled to your wallet or bank account as usual.
+
+## Requirements
+
+- **One account per customer.** Creating an account again for the same customer email returns the existing account rather than opening a second one.
+- **Test mode.** With a test key, the API returns a test account number that is not opened at any bank, so no real transfers can be made to it.
+
+## Fees
+
+Each transfer into a virtual account is charged your normal **bank transfer** collection fee. Since the customer chooses the amount, the fee is always deducted from what you receive; it is never added on top.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="code" href="/api-reference/virtual-accounts">
+    Create, list and look up virtual accounts and their transactions.
+  </Card>
+  <Card title="Webhooks" icon="bell" href="/api-reference/webhooks">
+    Receive a `payment.success` event for every transfer.
+  </Card>
+</CardGroup>
