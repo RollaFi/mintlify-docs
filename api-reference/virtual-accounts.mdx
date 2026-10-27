@@ -25,7 +25,7 @@ Authorization: Bearer sk_live_your_secret_key
   Open a permanent account for a customer
 </Card>
 
-Creating an account for a customer who already has one returns the existing account with status `200`, not a second account. A new account returns `201`.
+A new account returns `201`. A customer can have several accounts, but each `reference` can be used only once: reusing one is refused with `409`, so look that account up with [Get a Virtual Account](#get-a-virtual-account) instead.
 
 ### Request Body
 
@@ -33,7 +33,7 @@ Creating an account for a customer who already has one returns the existing acco
   The customer the account belongs to
   <Expandable title="properties">
     <ParamField body="email" type="string" required>
-      Customer's email address. Identifies the customer: one account per email.
+      Customer's email address. Identifies the customer; one customer can have several accounts.
     </ParamField>
     <ParamField body="first_name" type="string" required>
       Customer's first name
@@ -51,7 +51,7 @@ Creating an account for a customer who already has one returns the existing acco
 </ParamField>
 
 <ParamField body="reference" type="string">
-  Your own identifier for this account or customer (max 100 characters). Returned as `merchant_reference`.
+  Your own identifier for this account or customer (max 100 characters). Must be unique across your virtual accounts. Returned as `merchant_reference`.
 </ParamField>
 
 <ParamField body="metadata" type="object">
@@ -124,31 +124,21 @@ print(response.json()["data"]["account_number"])
   "success": true,
   "message": "Virtual account created",
   "data": {
-    "id": "c84faf67-b039-43f4-bbd9-6d195cd7288a",
     "reference": "VA_2T5RLBWBQ8MWY3",
     "account_number": "9002401234",
     "account_name": "Your Business - Ada Obi",
     "bank_name": "NET Microfinance Bank",
-    "bank_code": "090675",
-    "currency": "NGN",
-    "status": "active",
-    "mode": "live",
-    "account_type": "static",
-    "merchant_reference": "cust-001",
-    "customer": {
-      "id": "a2da61ff-e872-4879-8ea7-65400d0bb055",
-      "reference": "CUS_GMI8UYBEC32U",
-      "email": "ada@example.com",
-      "name": "Ada Obi",
-      "phone": "08031234567"
-    },
-    "bvn_last4": "2222",
-    "total_transactions": 0,
-    "total_received": 0,
-    "last_transaction_at": null,
-    "metadata": {},
-    "created_at": "2026-10-27T13:26:04.496Z"
+    "merchant_reference": "cust-001"
   }
+}
+```
+
+```json 409 Reference already used
+{
+  "success": false,
+  "status": 409,
+  "code": "VIRTUAL_ACCOUNT_REFERENCE_EXISTS",
+  "message": "Reference cust-001 is already used by a virtual account"
 }
 ```
 
@@ -165,20 +155,11 @@ print(response.json()["data"]["account_number"])
 
 <ResponseField name="data" type="object">
   <Expandable title="properties">
-    <ResponseField name="id" type="string">Virtual account ID</ResponseField>
-    <ResponseField name="reference" type="string">Rolla Pay reference (`VA_...`). Can be used in place of `id`.</ResponseField>
+    <ResponseField name="reference" type="string">Rolla Pay reference for the account (`VA_...`). Use it to fetch the account and its transactions.</ResponseField>
     <ResponseField name="account_number" type="string">The 10-digit account number your customer transfers to</ResponseField>
     <ResponseField name="account_name" type="string">Name the customer sees when they enter the account number in their bank app</ResponseField>
     <ResponseField name="bank_name" type="string">Bank to select when transferring</ResponseField>
-    <ResponseField name="bank_code" type="string">NIBSS bank code</ResponseField>
-    <ResponseField name="status" type="string">`active` or `inactive`</ResponseField>
-    <ResponseField name="mode" type="string">`test` or `live`</ResponseField>
-    <ResponseField name="merchant_reference" type="string">Your `reference`, if you sent one</ResponseField>
-    <ResponseField name="customer" type="object">The customer the account belongs to</ResponseField>
-    <ResponseField name="bvn_last4" type="string">Last four digits of the BVN used, or `null` if none was sent</ResponseField>
-    <ResponseField name="total_transactions" type="number">Number of transfers received</ResponseField>
-    <ResponseField name="total_received" type="number">Total amount received, in NGN</ResponseField>
-    <ResponseField name="last_transaction_at" type="string">When the last transfer arrived</ResponseField>
+    <ResponseField name="merchant_reference" type="string">Your `reference`, if you sent one, otherwise `null`</ResponseField>
   </Expandable>
 </ResponseField>
 
@@ -202,12 +183,20 @@ print(response.json()["data"]["account_number"])
   Search by account number, account name, reference, your reference or customer email
 </ParamField>
 
+<ParamField query="merchant_reference" type="string">
+  Only the account with exactly this `reference` (the one you sent when creating it)
+</ParamField>
+
+<ParamField query="customer_email" type="string">
+  Only this customer's accounts. Exact match, ignoring case.
+</ParamField>
+
 <ParamField query="status" type="string">
   Filter by `active` or `inactive`
 </ParamField>
 
 ```bash
-curl "https://api.rollapay.com/virtual-accounts?page=1&limit=20" \
+curl "https://api.rollapay.com/virtual-accounts?customer_email=ada@example.com" \
   -H "Authorization: Bearer sk_live_your_secret_key"
 ```
 
@@ -216,7 +205,15 @@ curl "https://api.rollapay.com/virtual-accounts?page=1&limit=20" \
   "success": true,
   "message": "Virtual accounts retrieved",
   "data": {
-    "virtual_accounts": [ { "id": "c84faf67-...", "account_number": "9002401234", "...": "..." } ],
+    "virtual_accounts": [
+      {
+        "reference": "VA_2T5RLBWBQ8MWY3",
+        "account_number": "9002401234",
+        "account_name": "Your Business - Ada Obi",
+        "bank_name": "NET Microfinance Bank",
+        "merchant_reference": "cust-001"
+      }
+    ],
     "pagination": { "total": 1, "page": 1, "limit": 20, "totalPages": 1 }
   }
 }
@@ -224,8 +221,8 @@ curl "https://api.rollapay.com/virtual-accounts?page=1&limit=20" \
 
 ## Get a Virtual Account
 
-<Card title="GET /virtual-accounts/:id" icon="magnifying-glass">
-  Fetch one account by `id` or `reference`
+<Card title="GET /virtual-accounts/:reference" icon="magnifying-glass">
+  Fetch one account by its `reference`
 </Card>
 
 ```bash
@@ -237,7 +234,7 @@ Returns the same object as [Create](#create-a-virtual-account). Returns `404` if
 
 ## List Transactions for a Virtual Account
 
-<Card title="GET /virtual-accounts/:id/transactions" icon="arrow-down-left">
+<Card title="GET /virtual-accounts/:reference/transactions" icon="arrow-down-left">
   Transfers received into an account, newest first
 </Card>
 
@@ -264,7 +261,7 @@ curl "https://api.rollapay.com/virtual-accounts/VA_2T5RLBWBQ8MWY3/transactions" 
     "transactions": [
       {
         "id": "6c09fef8-89a4-475f-b225-7c11a24faebc",
-        "reference": "VAC_8f3c2a91e4d24b7c9a1f0e6d5c4b3a21",
+        "reference": "CYRJ6TOXGHFUWPTV",
         "amount": 5000,
         "fee_amount": 75,
         "net_amount": 4925,
@@ -293,7 +290,7 @@ Every transfer into a virtual account sends a `payment.success` webhook. It carr
 {
   "event": "payment.success",
   "data": {
-    "reference": "VAC_8f3c2a91e4d24b7c9a1f0e6d5c4b3a21",
+    "reference": "CYRJ6TOXGHFUWPTV",
     "status": "successful",
     "amount": 5000,
     "currency": "NGN",
