@@ -121,7 +121,8 @@ print(response.json()["data"]["account_number"])
     "account_number": "9002401234",
     "account_name": "Your Business - Ada Obi",
     "bank_name": "NET Microfinance Bank",
-    "merchant_reference": "cust-001"
+    "merchant_reference": "cust-001",
+    "status": "active"
   }
 }
 ```
@@ -153,6 +154,7 @@ print(response.json()["data"]["account_number"])
     <ResponseField name="account_name" type="string">Name the customer sees when they enter the account number in their bank app</ResponseField>
     <ResponseField name="bank_name" type="string">Bank to select when transferring</ResponseField>
     <ResponseField name="merchant_reference" type="string">Your `reference`, if you sent one, otherwise `null`</ResponseField>
+    <ResponseField name="status" type="string">`active`, or `deactivated` once you have [deactivated](#deactivate-a-virtual-account) it</ResponseField>
   </Expandable>
 </ResponseField>
 
@@ -185,7 +187,7 @@ print(response.json()["data"]["account_number"])
 </ParamField>
 
 <ParamField query="status" type="string">
-  Filter by `active` or `inactive`
+  Filter by `active` or `deactivated`
 </ParamField>
 
 ```bash
@@ -204,7 +206,8 @@ curl "https://api.rollapay.com/collections/virtual-accounts?customer_email=ada@e
         "account_number": "9002401234",
         "account_name": "Your Business - Ada Obi",
         "bank_name": "NET Microfinance Bank",
-        "merchant_reference": "cust-001"
+        "merchant_reference": "cust-001",
+        "status": "active"
       }
     ],
     "pagination": { "total": 1, "page": 1, "limit": 20, "totalPages": 1 }
@@ -274,6 +277,40 @@ curl "https://api.rollapay.com/collections/virtual-accounts/VA_2T5RLBWBQ8MWY3/tr
 ```
 
 Each transaction can also be fetched with [Verify Transaction](/api-reference/verify-transaction) using its `reference`.
+
+## Deactivate a Virtual Account
+
+<Card title="POST /collections/virtual-accounts/:reference/deactivate" icon="ban">
+  Stop an account from receiving transfers
+</Card>
+
+Deactivating closes the account at the bank, so any transfer to it is declined. This is **permanent**: a deactivated account cannot be switched back on. To collect from the customer again, create a new virtual account.
+
+The account is not deleted. It stays in your list with `status: "deactivated"`, and its transactions remain available. Deactivating an account that is already deactivated returns it unchanged.
+
+<Note>
+  A customer's bank app may still show the account name when they enter the number, but the transfer will be declined. If a transfer was already on its way when you deactivated the account and still arrives, it is recorded and credited to you as normal.
+</Note>
+
+```bash
+curl -X POST "https://api.rollapay.com/collections/virtual-accounts/VA_2T5RLBWBQ8MWY3/deactivate" \
+  -H "Authorization: Bearer sk_live_your_secret_key"
+```
+
+```json Response
+{
+  "success": true,
+  "message": "Virtual account deactivated",
+  "data": {
+    "reference": "VA_2T5RLBWBQ8MWY3",
+    "account_number": "9002401234",
+    "account_name": "Your Business - Ada Obi",
+    "bank_name": "NET Microfinance Bank",
+    "merchant_reference": "cust-001",
+    "status": "deactivated"
+  }
+}
+```
 
 ## Webhook
 

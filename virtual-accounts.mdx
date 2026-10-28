@@ -37,6 +37,7 @@ Rolla Pay gives you two kinds of account for bank transfers. A **dynamic** accou
 
 - **Several accounts per customer.** A customer can have more than one account, for example one per wallet. Give each its own `reference`.
 - **Unique reference.** Your `reference` can be used for only one account; reusing it is refused with `409`.
+- **Deactivating is permanent.** A deactivated account declines all transfers and cannot be switched back on. It stays in your list, with its transactions.
 - **BVN is optional.** If you send the customer's 11-digit BVN, it is passed to the bank when the account is opened. Rolla Pay keeps only its last four digits.
 - **Test mode.** With a test key, the API returns a test account number that is not opened at any bank, so no real transfers can be made to it.
 
