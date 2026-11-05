@@ -8,9 +8,21 @@ description: 'Process a card payment directly with card details from your server
 
 Charge a customer's card directly by sending card details from your server. Depending on the card and issuing bank, the payment may complete immediately or require additional authentication (3D Secure redirect, OTP, or PIN).
 
+<Warning>
+  **This endpoint must be enabled for your account, and your business must be PCI DSS compliant.** It is off by default. To request access, contact [support@rollapay.com](mailto:support@rollapay.com). Until it is enabled, card requests return a `403`, with test keys as well as live keys.
+</Warning>
+
 <Note>
-  If you don't want to handle card details, use the [Checkout API](/api-reference/checkout-api) instead — it provides a secure hosted payment page.
+  If you don't want to handle card details, use the [Checkout API](/api-reference/checkout-api) or [Payment Links](/api-reference/payment-links) instead. They need no approval, and customers enter their card on a secure hosted page.
 </Note>
+
+## PCI DSS compliance
+
+The Payment Card Industry Data Security Standard (PCI DSS) applies to any business that handles card details. This endpoint puts the full card number and CVV on your systems, so those systems are in scope and you are responsible for keeping them compliant.
+
+- **Send card details from your server only.** Your secret key must never reach a browser or mobile app.
+- **Never store the CVV**, even encrypted.
+- **Keep card details out of your logs**, error reports and analytics.
 
 ## Authentication
 
@@ -391,6 +403,13 @@ $result = json_decode($response, true);
 }
 ```
 
+```json 403 Card API Not Enabled
+{
+  "success": false,
+  "message": "Direct card payments through the API are not enabled for your account. Contact support to request access, or use the hosted checkout."
+}
+```
+
 ```json 409 Duplicate Reference
 {
   "success": false,
@@ -400,6 +419,8 @@ $result = json_decode($response, true);
 </ResponseExample>
 
 ## Test Cards
+
+Test cards use this same endpoint, so direct card access must be enabled for your account first.
 
 Use these test cards with your `sk_test_*` API key in sandbox mode:
 

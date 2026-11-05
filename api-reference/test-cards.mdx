@@ -11,6 +11,10 @@ Test cards allow you to simulate different payment scenarios in sandbox mode wit
   Test cards cannot be used in live/production mode. Attempting to use a test card with a live API key (`sk_live_*`) will result in a rejected transaction with the error message: "Test cards cannot be used in live mode."
 </Warning>
 
+<Note>
+  Sending card details through the API needs direct card access on your account, even with a test key. Without it, the request returns a `403`. See [Card Payment](/api-reference/card-payment). To test without it, use a test key with the [Checkout API](/api-reference/checkout-api).
+</Note>
+
 ## Test Card
 
 Use this card for testing your integration:

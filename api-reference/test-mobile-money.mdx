@@ -1,0 +1,93 @@
+---
+title: 'Test Mobile Money'
+description: 'Simulate mobile money payments with test API keys'
+---
+
+## Overview
+
+Mobile money payments made with a test secret key (`sk_test_*`) are simulated. Your request goes through the same validation and fee calculation as a live payment, and you get the same status updates, webhooks and callback, but no prompt is sent to any phone and nothing reaches a mobile money processor.
+
+## Test numbers
+
+The last four digits of `mobileMoney.phone` choose the outcome. Any other number succeeds.
+
+| Number ends in | Outcome | Time to final status |
+|---|---|---|
+| `0001` | Fails: the customer declined | About 5 seconds |
+| `0002` | Stays `processing`, then succeeds | About 60 seconds |
+| `0003` | Fails: insufficient funds | About 5 seconds |
+| Anything else | Succeeds | About 5 seconds |
+
+<Note>
+  The number goes in `mobileMoney.phone`. `customer.phone` is a contact detail and has no effect on the outcome.
+</Note>
+
+## Example
+
+This payment fails a few seconds after it is accepted, because the number ends in `0001`:
+
+```bash cURL
+curl -X POST "https://api.rollapay.com/transaction/initiate" \
+  -H "Authorization: Bearer sk_test_your_test_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reference": "test-momo-001",
+    "amount": 5000,
+    "currency": "XOF",
+    "channel": "mobile_money",
+    "customer": {
+      "email": "client@example.com",
+      "name": "Test Customer"
+    },
+    "mobileMoney": {
+      "phone": "221770000001",
+      "provider": "orange-senegal"
+    },
+    "callbackUrl": "https://yoursite.com/callback"
+  }'
+```
+
+## What to expect
+
+`POST /transaction/initiate` returns `status: "processing"`:
+
+```json
+{
+  "success": true,
+  "message": "Transaction initiated",
+  "data": {
+    "reference": "test-momo-001",
+    "status": "processing"
+  }
+}
+```
+
+The payment reaches `successful` or `failed` afterwards, not in that response, because a real customer takes time to approve a payment. Build against the webhook or [Verify Transaction](/api-reference/verify-transaction), not against the response to `initiate`.
+
+A failed test payment carries one of these reasons:
+
+| Number ends in | Failure reason |
+|---|---|
+| `0001` | `Sandbox: the customer declined the payment` |
+| `0003` | `Sandbox: the customer has insufficient funds` |
+
+## Webhooks
+
+`payment.success` and `payment.failed` fire for test payments, delivered to your **test** webhook URL and signed with your **test** webhook secret. If you sent a `callbackUrl`, it is notified as well.
+
+## How it differs from live
+
+The simulation stops where a real wallet would be involved, so these are not tested:
+
+- **Wallets.** `mobileMoney.provider` is not checked, so an unknown or missing provider is accepted here and rejected in live. Use [List Mobile Money Providers](/api-reference/mobile-money-providers) to get real identifiers.
+- **Payment flows.** Every test payment follows the `stk` flow. The sandbox never returns `requires_action` or a `payment_url`, and never asks for `customerCode`, so test your handling of the [other flows](/api-reference/mobile-money-payment#payment-flows) separately.
+- **Limits.** Processor minimums and wallet limits are not applied.
+- **Expiry.** A test payment always reaches a final status, so it never expires.
+
+Your own account rules still apply: mobile money must be enabled for the currency on your account, and `XOF` and `XAF` amounts must be whole numbers.
+
+## Separation from live
+
+- Test payments do not settle. Nothing is credited to a wallet, including your sandbox wallet. To fund a sandbox wallet, see [Test Payouts](/api-reference/test-payouts#funding-your-sandbox-wallet).
+- A test key always simulates mobile money. No test payment reaches a processor or a customer's phone.
+- Test numbers mean nothing in live. A live payment to a number ending in `0001` is a normal payment to that number.

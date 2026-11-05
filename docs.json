@@ -64,26 +64,61 @@
             "icon": "code",
             "groups": [
               {
-                "group": "API Reference",
+                "group": "Get Started",
                 "pages": [
-                  "api-reference/introduction"
+                  "api-reference/introduction",
+                  "api-reference/api-keys",
+                  "api-reference/webhooks",
+                  "api-reference/response-codes"
                 ]
               },
               {
-                "group": "Payins",
+                "group": "Testing",
                 "pages": [
                   "api-reference/test-cards",
-                  "api-reference/initiate-payment",
-                  "api-reference/card-payment",
-              "api-reference/submit-card-auth",
-                  "api-reference/bank-transfer-payment",
-                  "api-reference/mobile-money-payment",
-                  "api-reference/mobile-money-providers",
-                  "api-reference/palmpay-payment",
+                  "api-reference/test-mobile-money",
+                  "api-reference/test-payouts"
+                ]
+              },
+              {
+                "group": "Accept Payments",
+                "pages": [
                   "api-reference/checkout-api",
+                  "api-reference/payment-links",
                   "api-reference/verify-transaction",
-                  "api-reference/refunds",
-                  "api-reference/response-codes"
+                  "api-reference/refunds"
+                ]
+              },
+              {
+                "group": "Direct Payments",
+                "pages": [
+                  "api-reference/initiate-payment",
+                  {
+                    "group": "Cards",
+                    "pages": [
+                      "api-reference/card-payment",
+                      "api-reference/submit-card-auth"
+                    ]
+                  },
+                  {
+                    "group": "Mobile Money",
+                    "pages": [
+                      "api-reference/mobile-money-payment",
+                      "api-reference/mobile-money-providers"
+                    ]
+                  },
+                  {
+                    "group": "Bank Transfer",
+                    "pages": [
+                      "api-reference/bank-transfer-payment"
+                    ]
+                  },
+                  {
+                    "group": "Wallets",
+                    "pages": [
+                      "api-reference/palmpay-payment"
+                    ]
+                  }
                 ]
               },
               {
@@ -93,35 +128,32 @@
                 ]
               },
               {
-                "group": "Remittance",
-                "pages": [
-                  "api-reference/owlpay-customers",
-                  "api-reference/owlpay-payment"
-                ]
-              },
-              {
-                "group": "Payouts",
+                "group": "Send Payouts",
                 "pages": [
                   "api-reference/payouts",
-                  "api-reference/test-payouts",
-                  "api-reference/banks",
-                  "api-reference/name-enquiry",
                   "api-reference/initiate-payout",
-                  "api-reference/bank-transfer-payout",
-                  "api-reference/mobile-money-payout",
+                  {
+                    "group": "Bank Transfer",
+                    "pages": [
+                      "api-reference/banks",
+                      "api-reference/name-enquiry",
+                      "api-reference/bank-transfer-payout"
+                    ]
+                  },
+                  {
+                    "group": "Mobile Money",
+                    "pages": [
+                      "api-reference/mobile-money-payout"
+                    ]
+                  },
                   "api-reference/verify-payout"
                 ]
               },
               {
-                "group": "Webhooks",
+                "group": "Remittance",
                 "pages": [
-                  "api-reference/webhooks"
-                ]
-              },
-              {
-                "group": "API Keys",
-                "pages": [
-                  "api-reference/api-keys"
+                  "api-reference/owlpay-customers",
+                  "api-reference/owlpay-payment"
                 ]
               }
             ]

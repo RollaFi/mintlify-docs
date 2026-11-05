@@ -9,7 +9,7 @@ description: 'Process payments directly from your server via card, bank transfer
 The Direct Payment API lets you process payments directly from your server. Depending on the channel, you can charge a card, initiate a bank transfer (virtual account), or accept mobile money.
 
 **Use this when:**
-- You have your own payment form and collect card details yourself
+- You have your own payment form and collect card details yourself (needs [direct card access](/api-reference/card-payment) and PCI DSS compliance)
 - You want to generate a virtual account for bank transfer payments
 - You need full control over the checkout UI
 - You're building a mobile app or custom integration
@@ -24,7 +24,7 @@ Choose the payment method that fits your use case. Each page includes full reque
 
 <CardGroup cols={3}>
   <Card title="Card Payment" icon="credit-card" href="/api-reference/card-payment">
-    Charge a customer's card directly. Supports 3D Secure, OTP, and PIN authentication flows.
+    Charge a customer's card directly. Needs direct card access and PCI DSS compliance. Supports 3D Secure, OTP, and PIN authentication flows.
   </Card>
   <Card title="Bank Transfer" icon="building-columns" href="/api-reference/bank-transfer-payment">
     Generate a temporary virtual account for the customer to transfer to. Available for NGN payments.

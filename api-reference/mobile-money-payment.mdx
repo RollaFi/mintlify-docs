@@ -55,7 +55,7 @@ Authorization: Bearer sk_live_your_secret_key
 ```
 
 <Note>
-  Use `sk_test_*` keys for testing and `sk_live_*` keys for production.
+  Use `sk_test_*` keys for testing and `sk_live_*` keys for production. With a test key, payments are simulated and the number chooses the outcome. See [Test Mobile Money](/api-reference/test-mobile-money).
 </Note>
 
 ## Request Body
@@ -134,7 +134,7 @@ Authorization: Bearer sk_live_your_secret_key
       Unique transaction reference or your custom reference if provided
     </ResponseField>
     <ResponseField name="status" type="string">
-      `pending` — a prompt is on the customer's phone and you are waiting for them to approve it. `requires_action` — the customer has to finish on the wallet's own page, at `payment_url`.
+      `processing` — a prompt is on the customer's phone and you are waiting for them to approve it. `requires_action` — the customer has to finish on the wallet's own page, at `payment_url`.
     </ResponseField>
     <ResponseField name="payment_url" type="string">
       Present only when `status` is `requires_action`. Send the customer here to complete the payment. Returning from it does **not** mean the payment succeeded — confirm with [Verify Transaction](/api-reference/verify-transaction) or wait for the webhook.
@@ -281,7 +281,7 @@ $result = json_decode($response, true);
   "message": "Transaction initiated",
   "data": {
     "reference": "ORD-78901",
-    "status": "pending"
+    "status": "processing"
   }
 }
 ```
@@ -395,7 +395,7 @@ In Ghana this step is optional — every wallet there is `stk` and `mobileMoney.
 3. **Send the customer there.** They finish in the wallet's app or on its site.
 
 <Note>
-  `stk` and `redirect` ask the customer for exactly the same thing, so a wallet reporting `stk` can still come back `requires_action`. Branch your **form** on `flow`, but branch what you do **after charging** on the response: `pending` means the prompt is already on the phone, `requires_action` means you have somewhere to send them.
+  `stk` and `redirect` ask the customer for exactly the same thing, so a wallet reporting `stk` can still come back `requires_action`. Branch your **form** on `flow`, but branch what you do **after charging** on the response: `processing` means the prompt is already on the phone, `requires_action` means you have somewhere to send them.
 </Note>
 
 <Warning>
