@@ -1,0 +1,127 @@
+---
+title: 'Popup Checkout'
+description: 'Open the Rolla Pay checkout in a popup on your own page — no redirect, no server call to start the payment'
+---
+
+## Overview
+
+Popup Checkout opens the Rolla Pay checkout in a window over your page. The customer picks a payment method and pays without leaving your site. When the payment succeeds, the popup closes and your page is told the transaction reference.
+
+It runs in the browser with your **public key** (`pk_live_*` or `pk_test_*`). Your secret key stays on your server, where you use it to verify the payment.
+
+**Use this when:**
+- You want customers to stay on your page while they pay
+- You don't want to build a payment form or handle card details
+- You want to start the payment from the browser, with no server call first
+
+The popup shows the payment methods enabled on your account for the currency you pass, such as card, bank transfer, mobile money or PalmPay.
+
+## Add the popup
+
+<Steps>
+  <Step title="Include the script">
+    Add the script to the page where customers pay:
+
+    ```html
+    <script src="https://payment.rollapay.com/rolla-pay-widget.js"></script>
+    ```
+  </Step>
+  <Step title="Open the popup">
+    Call `newTransaction` when the customer clicks your pay button:
+
+    ```html
+    <button id="pay">Pay now</button>
+
+    <script>
+      document.getElementById('pay').addEventListener('click', function () {
+        var rollapay = new RollaPayPop();
+        rollapay.newTransaction({
+          key: 'pk_live_your_public_key',
+          email: 'customer@example.com',
+          amount: 5000,          // 5,000 NGN
+          currency: 'NGN',
+          ref: 'ORD-12345',      // your unique order reference
+          firstName: 'John',
+          lastName: 'Doe',
+          metadata: { orderId: 'ORD-12345' },
+          onSuccess: function (transaction) {
+            // Send the reference to your server to verify before you fulfil.
+            fetch('/orders/verify?reference=' + encodeURIComponent(transaction.reference));
+          },
+          onCancel: function () {
+            // The popup closed without a successful payment.
+          }
+        });
+      });
+    </script>
+    ```
+  </Step>
+  <Step title="Verify on your server">
+    In `onSuccess`, send the reference to your server and confirm the payment with [Verify Transaction](/api-reference/verify-transaction) before you fulfil the order:
+
+    ```bash
+    curl "https://api.rollapay.com/transaction/verify/ORD-12345" \
+      -H "Authorization: Bearer sk_live_your_secret_key"
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  Anyone can call `onSuccess` from their browser's console. Always verify the transaction on your server, or wait for the [webhook](/api-reference/webhooks), before you deliver goods or credit an account.
+</Warning>
+
+## Options
+
+<ParamField body="key" type="string" required>
+  Your public key: `pk_live_*` for real payments, `pk_test_*` for testing. Never put a secret key (`sk_*`) in a web page.
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  The customer's email address.
+</ParamField>
+
+<ParamField body="amount" type="number" required>
+  The amount to charge, as you would send it to the API: `5000` charges 5,000 NGN, and `25.50` charges 25.50 USD. `XOF` and `XAF` amounts must be whole numbers.
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  Three-letter ISO currency code, e.g. `NGN`, `USD`, `GHS` or `XOF`. If you leave it out, it defaults to `NGN`.
+</ParamField>
+
+<ParamField body="ref" type="string">
+  Your unique reference for this payment, such as your order ID. It is returned in `onSuccess` and is what you verify with. Use a new reference for every payment.
+</ParamField>
+
+<ParamField body="firstName" type="string">
+  The customer's first name.
+</ParamField>
+
+<ParamField body="lastName" type="string">
+  The customer's last name.
+</ParamField>
+
+<ParamField body="phone" type="string">
+  The customer's phone number.
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  Key-value pairs to attach to the transaction, such as an order or cart ID.
+</ParamField>
+
+<ParamField body="onSuccess" type="function">
+  Called after the payment succeeds and the popup closes. It receives `{ reference, status: "success" }`.
+</ParamField>
+
+<ParamField body="onCancel" type="function">
+  Called when the popup closes without a successful payment. This happens when the customer clicks the close button or presses Esc, or the payment can't be completed.
+</ParamField>
+
+To close the popup yourself, call `rollapay.close()` on the same instance. This does not call `onCancel`.
+
+## Test Mode
+
+Use your `pk_test_*` key to open the popup in test mode. Test payments use sandbox processors and never move real money. See [Test Cards](/api-reference/test-cards).
+
+<Note>
+  Prefer to send customers to a Rolla Pay page instead? Use the [Checkout API](/api-reference/checkout-api) to create a hosted checkout link from your server.
+</Note>

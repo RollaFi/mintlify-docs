@@ -84,6 +84,7 @@
                 "group": "Accept Payments",
                 "pages": [
                   "api-reference/checkout-api",
+                  "api-reference/popup-checkout",
                   "api-reference/payment-links",
                   "api-reference/verify-transaction",
                   "api-reference/refunds"
