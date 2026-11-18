@@ -1,0 +1,281 @@
+---
+title: 'Get Bulk Payout'
+api: 'GET https://api.rollapay.com/payout/bulk/{reference}'
+description: 'Check a bulk payout and each of its payouts'
+---
+
+## Overview
+
+Returns a bulk payout's status, its totals, and every payout in it: whether it passed the checks and, once sent, how it is doing.
+
+## Authentication
+
+| Header | Type | Required | Description |
+|--------|------|----------|-------------|
+| `Authorization` | string | Yes | Your secret key (`sk_live_xxx`) |
+
+## Path Parameters
+
+<ParamField path="reference" type="string" required>
+  The batch `reference` (e.g. `BATCH-1795001234567-K3M9QX2A`) or `id` returned by [Bulk Payout](/api-reference/bulk-payout).
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.rollapay.com/payout/bulk/BATCH-1795001234567-K3M9QX2A" \
+  -H "Authorization: Bearer sk_live_your_secret_key"
+```
+
+```javascript Node.js
+const response = await fetch('https://api.rollapay.com/payout/bulk/BATCH-1795001234567-K3M9QX2A', {
+  headers: {
+    'Authorization': 'Bearer sk_live_your_secret_key',
+  },
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://api.rollapay.com/payout/bulk/BATCH-1795001234567-K3M9QX2A',
+    headers={
+        'Authorization': 'Bearer sk_live_your_secret_key',
+    }
+)
+
+data = response.json()
+```
+</RequestExample>
+
+## Batch Statuses
+
+| Status | Meaning |
+|--------|---------|
+| `checking` | We are checking each payout. Nothing is debited. |
+| `awaiting_approval` | Checked. Waiting for the business owner to approve on the dashboard, until `approve_by`. |
+| `processing` | Approved. Your wallet is debited and the payouts are with the banks. |
+| `completed` | Every payout completed. |
+| `completed_with_failures` | Every payout finished and at least one failed. Failed payouts are refunded to your wallet. |
+| `cancelled` | Cancelled on the dashboard, or after three wrong authenticator codes. Nothing was sent. |
+| `expired` | Not approved within 30 minutes of the checks. Nothing was sent; create the batch again. |
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  `Bulk payout retrieved`, or the reason the request failed.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      Batch ID.
+    </ResponseField>
+    <ResponseField name="reference" type="string">
+      Batch reference.
+    </ResponseField>
+    <ResponseField name="name" type="string | null">
+      The `name` you sent.
+    </ResponseField>
+    <ResponseField name="currency" type="string">
+      Currency code.
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      See [Batch Statuses](#batch-statuses).
+    </ResponseField>
+    <ResponseField name="fee_source" type="string">
+      `balance` or `amount`.
+    </ResponseField>
+    <ResponseField name="total_payouts" type="number">
+      Payouts received.
+    </ResponseField>
+    <ResponseField name="valid_payouts" type="number">
+      Payouts that passed the checks. Only these are sent.
+    </ResponseField>
+    <ResponseField name="invalid_payouts" type="number">
+      Payouts left out, each with an `error`.
+    </ResponseField>
+    <ResponseField name="total_amount" type="number">
+      Sum of the valid payouts' amounts.
+    </ResponseField>
+    <ResponseField name="total_fee" type="number">
+      Sum of their fees.
+    </ResponseField>
+    <ResponseField name="total_vat" type="number">
+      VAT on those fees.
+    </ResponseField>
+    <ResponseField name="total_stamp_duty" type="number">
+      Stamp duty, where it applies.
+    </ResponseField>
+    <ResponseField name="total_debit" type="number">
+      What leaves your wallet when the batch is approved.
+    </ResponseField>
+    <ResponseField name="approve_by" type="string | null">
+      While `awaiting_approval`: when the batch expires if the owner has not approved it.
+    </ResponseField>
+    <ResponseField name="progress" type="object">
+      Once sent: how many payouts are `completed`, `processing` and `failed`.
+    </ResponseField>
+    <ResponseField name="created_at" type="string">
+      When the batch was created.
+    </ResponseField>
+    <ResponseField name="checked_at" type="string | null">
+      When the checks finished.
+    </ResponseField>
+    <ResponseField name="approved_at" type="string | null">
+      When the owner approved it.
+    </ResponseField>
+    <ResponseField name="completed_at" type="string | null">
+      When the last payout finished.
+    </ResponseField>
+    <ResponseField name="cancelled_at" type="string | null">
+      When it was cancelled.
+    </ResponseField>
+    <ResponseField name="payouts" type="array">
+      Every payout in the batch, in the order you sent them.
+      <Expandable title="properties">
+        <ResponseField name="row" type="number">
+          Position in your request, from 1.
+        </ResponseField>
+        <ResponseField name="reference" type="string">
+          Your reference.
+        </ResponseField>
+        <ResponseField name="check_status" type="string">
+          `pending` (not checked yet), `valid`, `invalid` (see `error`), then `sending`, `sent`, or `failed` if the debit was refused.
+        </ResponseField>
+        <ResponseField name="error" type="string | null">
+          Why the payout was left out or failed to send.
+        </ResponseField>
+        <ResponseField name="amount" type="number | null">
+          Amount.
+        </ResponseField>
+        <ResponseField name="fee" type="number | null">
+          Fee.
+        </ResponseField>
+        <ResponseField name="vat_amount" type="number | null">
+          VAT on the fee.
+        </ResponseField>
+        <ResponseField name="stamp_duty" type="number | null">
+          Stamp duty.
+        </ResponseField>
+        <ResponseField name="net_amount" type="number | null">
+          What the recipient receives.
+        </ResponseField>
+        <ResponseField name="total_debit" type="number | null">
+          What this payout takes from your wallet.
+        </ResponseField>
+        <ResponseField name="bank_code" type="string | null">
+          Recipient bank code.
+        </ResponseField>
+        <ResponseField name="bank_name" type="string | null">
+          Recipient bank.
+        </ResponseField>
+        <ResponseField name="account_number" type="string | null">
+          Recipient account number.
+        </ResponseField>
+        <ResponseField name="account_name" type="string | null">
+          The account name the bank returned.
+        </ResponseField>
+        <ResponseField name="narration" type="string | null">
+          Your narration.
+        </ResponseField>
+        <ResponseField name="payout_reference" type="string | null">
+          Once sent: the payout's Rolla Pay reference, for [Verify Payout](/api-reference/verify-payout).
+        </ResponseField>
+        <ResponseField name="payout_status" type="string | null">
+          Once sent: `pending`, `processing`, `completed` or `failed`.
+        </ResponseField>
+        <ResponseField name="failure_reason" type="string | null">
+          Why the payout failed.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseExample>
+```json 200
+{
+  "success": true,
+  "message": "Bulk payout retrieved",
+  "data": {
+    "id": "5d2b9f0e-3c1a-4b8e-a7d4-9e6f1c2b3a40",
+    "reference": "BATCH-1795001234567-K3M9QX2A",
+    "name": "November salaries",
+    "currency": "NGN",
+    "status": "processing",
+    "fee_source": "balance",
+    "total_payouts": 2,
+    "valid_payouts": 1,
+    "invalid_payouts": 1,
+    "total_amount": 150000,
+    "total_fee": 50,
+    "total_vat": 3.75,
+    "total_stamp_duty": 50,
+    "total_debit": 150103.75,
+    "approve_by": null,
+    "progress": { "completed": 0, "processing": 1, "failed": 0 },
+    "created_at": "2026-11-18T10:15:02.000Z",
+    "checked_at": "2026-11-18T10:15:09.000Z",
+    "approved_at": "2026-11-18T10:21:40.000Z",
+    "completed_at": null,
+    "cancelled_at": null,
+    "payouts": [
+      {
+        "row": 1,
+        "reference": "salary-nov-0001",
+        "check_status": "sent",
+        "error": null,
+        "amount": 150000,
+        "fee": 50,
+        "vat_amount": 3.75,
+        "stamp_duty": 50,
+        "net_amount": 150000,
+        "total_debit": 150103.75,
+        "bank_code": "000013",
+        "bank_name": "GTBank",
+        "account_number": "0123456789",
+        "account_name": "JANE DOE",
+        "narration": "November salary",
+        "payout_reference": "PAYOUT-RP-1795001300000-X7K2M9QA4B",
+        "payout_status": "processing",
+        "failure_reason": null
+      },
+      {
+        "row": 2,
+        "reference": "salary-nov-0002",
+        "check_status": "invalid",
+        "error": "account_number must be 10 digits for NGN bank payouts",
+        "amount": null,
+        "fee": null,
+        "vat_amount": null,
+        "stamp_duty": null,
+        "net_amount": null,
+        "total_debit": null,
+        "bank_code": "000014",
+        "bank_name": null,
+        "account_number": "987654321",
+        "account_name": null,
+        "narration": null,
+        "payout_reference": null,
+        "payout_status": null,
+        "failure_reason": null
+      }
+    ]
+  }
+}
+```
+
+```json 404
+{
+  "success": false,
+  "message": "Bulk payout not found"
+}
+```
+</ResponseExample>

@@ -129,6 +129,12 @@
                 ]
               },
               {
+                "group": "Wallet",
+                "pages": [
+                  "api-reference/wallet-balance"
+                ]
+              },
+              {
                 "group": "Send Payouts",
                 "pages": [
                   "api-reference/payouts",
@@ -147,7 +153,9 @@
                       "api-reference/mobile-money-payout"
                     ]
                   },
-                  "api-reference/verify-payout"
+                  "api-reference/verify-payout",
+                  "api-reference/bulk-payout",
+                  "api-reference/get-bulk-payout"
                 ]
               },
               {
