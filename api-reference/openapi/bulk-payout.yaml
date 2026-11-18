@@ -1,0 +1,84 @@
+openapi: 3.0.3
+info:
+  title: Rolla Pay bulk payout
+  version: '1.0'
+servers:
+  - url: https://api.rollapay.com
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Your secret key (sk_live_xxx)
+paths:
+  /payout/bulk:
+    post:
+      summary: Bulk Payout
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, currency]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The CSV or .xlsx file of payouts, up to 500 rows and 512 KB.
+                currency:
+                  type: string
+                  description: The wallet to pay from. NGN only for now.
+                  example: NGN
+                fee_source:
+                  type: string
+                  enum: [balance, amount]
+                  default: balance
+                  description: >-
+                    Who pays each payout's fee. balance adds the fee on top, so the
+                    recipient gets the full amount; amount takes the fee out of amount.
+                name:
+                  type: string
+                  description: A label for the batch, shown on the dashboard. Defaults to the file's name.
+                  example: November salaries
+      responses:
+        '202':
+          description: The batch is created and its checks have started. Nothing has been debited.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the request was successful.
+                  message:
+                    type: string
+                    description: A summary, or the reason the request failed.
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Batch ID.
+                      reference:
+                        type: string
+                        description: Batch reference. Use it with Get Bulk Payout.
+                      currency:
+                        type: string
+                        description: Currency code.
+                      status:
+                        type: string
+                        description: Always checking here.
+                      total_payouts:
+                        type: integer
+                        description: Number of payout rows in the file.
+                      fee_source:
+                        type: string
+                        description: balance or amount.
+                      created_at:
+                        type: string
+                        format: date-time
+                        description: When the batch was created.
