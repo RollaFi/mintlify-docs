@@ -93,9 +93,6 @@ $result = json_decode($response, true);
     <ResponseField name="mode" type="string">
       `live` or `test`, matching your key.
     </ResponseField>
-    <ResponseField name="updated_at" type="string">
-      When the wallet last changed (ISO 8601).
-    </ResponseField>
   </Expandable>
 </ResponseField>
 
@@ -109,8 +106,7 @@ $result = json_decode($response, true);
     "available_balance": 250000.5,
     "ledger_balance": 250000.5,
     "status": "active",
-    "mode": "live",
-    "updated_at": "2026-11-18T09:41:12.000Z"
+    "mode": "live"
   }
 }
 ```

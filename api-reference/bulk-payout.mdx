@@ -1,6 +1,6 @@
 ---
 title: 'Bulk Payout'
-api: 'POST https://api.rollapay.com/payout/bulk'
+openapi: 'api-reference/openapi/bulk-payout.yaml POST /payout/bulk'
 description: 'Upload a file of up to 500 bank payouts, approved by the business owner'
 ---
 
@@ -33,13 +33,6 @@ Track the batch with [Get Bulk Payout](/api-reference/get-bulk-payout). Look up 
 - Up to 500 payouts are sent per hour across all of a business's batches.
 </Note>
 
-## Authentication
-
-| Header | Type | Required | Description |
-|--------|------|----------|-------------|
-| `Authorization` | string | Yes | Your secret key (`sk_live_xxx`) |
-| `Content-Type` | string | Yes | `multipart/form-data` (your HTTP library sets this, with the boundary, when you send a form) |
-
 ## The File
 
 A CSV or an Excel (`.xlsx`) file, up to 500 rows and 512 KB. The first row holds the column names below; their order does not matter, and other columns are ignored. You can download an Excel template from the Bulk Payouts page on your dashboard.
@@ -49,45 +42,25 @@ A CSV or an Excel (`.xlsx`) file, up to 500 rows and 512 KB. The first row holds
 | `type` | Yes | `bank` |
 | `amount` | Yes | Amount in naira, at most 2 decimal places (e.g. `5000` means ₦5,000). |
 | `account_number` | Yes | The recipient's 10-digit account number. |
-| `bank_code` | Yes, or `bank` | The recipient's bank code from [List Banks](/api-reference/banks). |
-| `bank` | Yes, or `bank_code` | The bank's name exactly as in the template's list, instead of `bank_code`. |
+| `bank_code` | Yes | The recipient's bank code from [List Banks](/api-reference/banks). |
 | `reference` | Yes | Your unique reference for this payout, up to 100 characters. It must not be used by any of your other payouts. You will see it as `merchant_reference` on webhooks and on Verify Payout. |
-| `account_name` | No | The name you expect on the account. If the bank's name does not match, that payout is left out of the batch. You do not need a name enquiry first: we look up every account ourselves. |
-| `narration` | No | A description for the transfer, up to 200 characters. |
+| `narration` | No | A description for the transfer, up to 100 characters. |
 
 ```csv payouts.csv
-type,amount,account_number,bank_code,account_name,narration,reference
-bank,150000,0123456789,000013,JANE DOE,November salary,salary-nov-0001
-bank,120000,9876543210,000014,,November salary,salary-nov-0002
+type,amount,account_number,bank_code,narration,reference
+bank,150000,0123456789,000013,November salary,salary-nov-0001
+bank,120000,9876543210,000014,November salary,salary-nov-0002
 ```
 
 <Note>
 Rows are numbered from the first row after the column names. A file with any row missing its `reference` is refused whole, naming the rows. Other problems, such as a wrong account number, leave out only that row; [Get Bulk Payout](/api-reference/get-bulk-payout) gives the reason.
 </Note>
 
-## Form Fields
-
-<ParamField body="file" type="file" required>
-  The CSV or `.xlsx` file described above.
-</ParamField>
-
-<ParamField body="currency" type="string" required>
-  The wallet to pay from. `NGN` only for now.
-</ParamField>
-
-<ParamField body="fee_source" type="string" default="balance">
-  Who pays each payout's fee. `balance`: the fee is added on top, so the recipient gets the full `amount`. `amount`: the fee is taken out of `amount`.
-</ParamField>
-
-<ParamField body="name" type="string">
-  A label for the batch, up to 255 characters, shown on the dashboard. For example `November salaries`. Defaults to the file's name.
-</ParamField>
-
 <RequestExample>
 ```bash cURL
 curl -X POST "https://api.rollapay.com/payout/bulk" \
   -H "Authorization: Bearer sk_live_your_secret_key" \
-  -F "file=@payouts.csv" \
+  -F "file=@/path/to/payouts.csv" \
   -F "currency=NGN" \
   -F "name=November salaries"
 ```
@@ -147,44 +120,6 @@ curl_close($ch);
 $result = json_decode($response, true);
 ```
 </RequestExample>
-
-## Response
-
-The batch is created and the checks have started. Nothing has been debited.
-
-<ResponseField name="success" type="boolean">
-  Indicates if the request was successful.
-</ResponseField>
-
-<ResponseField name="message" type="string">
-  A summary, or the reason the request failed.
-</ResponseField>
-
-<ResponseField name="data" type="object">
-  <Expandable title="properties">
-    <ResponseField name="id" type="string">
-      Batch ID.
-    </ResponseField>
-    <ResponseField name="reference" type="string">
-      Batch reference. Use it with [Get Bulk Payout](/api-reference/get-bulk-payout).
-    </ResponseField>
-    <ResponseField name="currency" type="string">
-      Currency code.
-    </ResponseField>
-    <ResponseField name="status" type="string">
-      Always `checking` here.
-    </ResponseField>
-    <ResponseField name="total_payouts" type="number">
-      Number of payout rows in the file.
-    </ResponseField>
-    <ResponseField name="fee_source" type="string">
-      `balance` or `amount`.
-    </ResponseField>
-    <ResponseField name="created_at" type="string">
-      When the batch was created (ISO 8601).
-    </ResponseField>
-  </Expandable>
-</ResponseField>
 
 <ResponseExample>
 ```json 202
