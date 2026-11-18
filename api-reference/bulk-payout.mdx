@@ -1,16 +1,16 @@
 ---
 title: 'Bulk Payout'
 api: 'POST https://api.rollapay.com/payout/bulk'
-description: 'Send up to 500 bank payouts in one request, approved by the business owner'
+description: 'Upload a file of up to 500 bank payouts, approved by the business owner'
 ---
 
 ## Overview
 
-Send up to 500 NGN bank payouts in one request. Nothing leaves your wallet until the business owner approves the batch.
+Upload a CSV or Excel file of up to 500 NGN bank payouts. Nothing leaves your wallet until the business owner approves the batch.
 
 <Steps>
-  <Step title="You create the batch">
-    Send the payouts to this endpoint. You get back a batch `reference` with status `checking`.
+  <Step title="You upload the file">
+    Upload the file to this endpoint. You get back a batch `reference` with status `checking`.
   </Step>
   <Step title="We check every payout">
     In the background we work out each payout's fee, apply your limits and look up the account name at the bank. Payouts that fail a check are left out of the batch, with the reason. Nothing is debited.
@@ -38,36 +38,41 @@ Track the batch with [Get Bulk Payout](/api-reference/get-bulk-payout). Look up 
 | Header | Type | Required | Description |
 |--------|------|----------|-------------|
 | `Authorization` | string | Yes | Your secret key (`sk_live_xxx`) |
-| `Content-Type` | string | Yes | `application/json` |
+| `Content-Type` | string | Yes | `multipart/form-data` (your HTTP library sets this, with the boundary, when you send a form) |
 
-## Body Parameters
+## The File
+
+A CSV or an Excel (`.xlsx`) file, up to 500 rows and 512 KB. The first row holds the column names below; their order does not matter, and other columns are ignored. You can download an Excel template from the Bulk Payouts page on your dashboard.
+
+| Column | Required | Description |
+|--------|----------|-------------|
+| `type` | Yes | `bank` |
+| `amount` | Yes | Amount in naira, at most 2 decimal places (e.g. `5000` means ₦5,000). |
+| `account_number` | Yes | The recipient's 10-digit account number. |
+| `bank_code` | Yes, or `bank` | The recipient's bank code from [List Banks](/api-reference/banks). |
+| `bank` | Yes, or `bank_code` | The bank's name exactly as in the template's list, instead of `bank_code`. |
+| `reference` | Yes | Your unique reference for this payout, up to 100 characters. It must not be used by any of your other payouts. You will see it as `merchant_reference` on webhooks and on Verify Payout. |
+| `account_name` | No | The name you expect on the account. If the bank's name does not match, that payout is left out of the batch. You do not need a name enquiry first: we look up every account ourselves. |
+| `narration` | No | A description for the transfer, up to 200 characters. |
+
+```csv payouts.csv
+type,amount,account_number,bank_code,account_name,narration,reference
+bank,150000,0123456789,000013,JANE DOE,November salary,salary-nov-0001
+bank,120000,9876543210,000014,,November salary,salary-nov-0002
+```
+
+<Note>
+Rows are numbered from the first row after the column names. A file with any row missing its `reference` is refused whole, naming the rows. Other problems, such as a wrong account number, leave out only that row; [Get Bulk Payout](/api-reference/get-bulk-payout) gives the reason.
+</Note>
+
+## Form Fields
+
+<ParamField body="file" type="file" required>
+  The CSV or `.xlsx` file described above.
+</ParamField>
 
 <ParamField body="currency" type="string" required>
   The wallet to pay from. `NGN` only for now.
-</ParamField>
-
-<ParamField body="payouts" type="array" required>
-  1 to 500 payouts.
-  <Expandable title="properties">
-    <ParamField body="reference" type="string" required>
-      Your unique reference for this payout, up to 100 characters. It must not be used by any of your other payouts. You will see it as `merchant_reference` on webhooks and on Verify Payout.
-    </ParamField>
-    <ParamField body="amount" type="number" required>
-      The amount in naira, at most 2 decimal places (e.g. `5000` means ₦5,000).
-    </ParamField>
-    <ParamField body="bank_code" type="string" required>
-      The recipient's bank code from [List Banks](/api-reference/banks).
-    </ParamField>
-    <ParamField body="account_number" type="string" required>
-      The recipient's 10-digit account number.
-    </ParamField>
-    <ParamField body="account_name" type="string">
-      The name you expect on the account. If you send it and the bank's name does not match, that payout is left out of the batch. You do not need a name enquiry first: we look up every account ourselves.
-    </ParamField>
-    <ParamField body="narration" type="string">
-      A description for the transfer, up to 200 characters.
-    </ParamField>
-  </Expandable>
 </ParamField>
 
 <ParamField body="fee_source" type="string" default="balance">
@@ -75,63 +80,32 @@ Track the batch with [Get Bulk Payout](/api-reference/get-bulk-payout). Look up 
 </ParamField>
 
 <ParamField body="name" type="string">
-  A label for the batch, up to 255 characters, shown on the dashboard. For example `November salaries`.
+  A label for the batch, up to 255 characters, shown on the dashboard. For example `November salaries`. Defaults to the file's name.
 </ParamField>
 
 <RequestExample>
 ```bash cURL
 curl -X POST "https://api.rollapay.com/payout/bulk" \
   -H "Authorization: Bearer sk_live_your_secret_key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "currency": "NGN",
-    "name": "November salaries",
-    "payouts": [
-      {
-        "reference": "salary-nov-0001",
-        "amount": 150000,
-        "bank_code": "000013",
-        "account_number": "0123456789",
-        "account_name": "JANE DOE",
-        "narration": "November salary"
-      },
-      {
-        "reference": "salary-nov-0002",
-        "amount": 120000,
-        "bank_code": "000014",
-        "account_number": "9876543210"
-      }
-    ]
-  }'
+  -F "file=@payouts.csv" \
+  -F "currency=NGN" \
+  -F "name=November salaries"
 ```
 
 ```javascript Node.js
+import { readFile } from 'node:fs/promises';
+
+const form = new FormData();
+form.append('file', new Blob([await readFile('payouts.csv')]), 'payouts.csv');
+form.append('currency', 'NGN');
+form.append('name', 'November salaries');
+
 const response = await fetch('https://api.rollapay.com/payout/bulk', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer sk_live_your_secret_key',
-    'Content-Type': 'application/json',
   },
-  body: JSON.stringify({
-    currency: 'NGN',
-    name: 'November salaries',
-    payouts: [
-      {
-        reference: 'salary-nov-0001',
-        amount: 150000,
-        bank_code: '000013',
-        account_number: '0123456789',
-        account_name: 'JANE DOE',
-        narration: 'November salary',
-      },
-      {
-        reference: 'salary-nov-0002',
-        amount: 120000,
-        bank_code: '000014',
-        account_number: '9876543210',
-      },
-    ],
-  }),
+  body: form,
 });
 
 const data = await response.json();
@@ -140,34 +114,37 @@ const data = await response.json();
 ```python Python
 import requests
 
-response = requests.post(
-    'https://api.rollapay.com/payout/bulk',
-    headers={
-        'Authorization': 'Bearer sk_live_your_secret_key',
-    },
-    json={
-        'currency': 'NGN',
-        'name': 'November salaries',
-        'payouts': [
-            {
-                'reference': 'salary-nov-0001',
-                'amount': 150000,
-                'bank_code': '000013',
-                'account_number': '0123456789',
-                'account_name': 'JANE DOE',
-                'narration': 'November salary',
-            },
-            {
-                'reference': 'salary-nov-0002',
-                'amount': 120000,
-                'bank_code': '000014',
-                'account_number': '9876543210',
-            },
-        ],
-    },
-)
+with open('payouts.csv', 'rb') as f:
+    response = requests.post(
+        'https://api.rollapay.com/payout/bulk',
+        headers={
+            'Authorization': 'Bearer sk_live_your_secret_key',
+        },
+        files={'file': ('payouts.csv', f)},
+        data={'currency': 'NGN', 'name': 'November salaries'},
+    )
 
 data = response.json()
+```
+
+```php PHP
+<?php
+
+$ch = curl_init('https://api.rollapay.com/payout/bulk');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer sk_live_your_secret_key',
+]);
+curl_setopt($ch, CURLOPT_POSTFIELDS, [
+    'file' => new CURLFile('payouts.csv'),
+    'currency' => 'NGN',
+    'name' => 'November salaries',
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+$result = json_decode($response, true);
 ```
 </RequestExample>
 
@@ -198,7 +175,7 @@ The batch is created and the checks have started. Nothing has been debited.
       Always `checking` here.
     </ResponseField>
     <ResponseField name="total_payouts" type="number">
-      Number of payouts received.
+      Number of payout rows in the file.
     </ResponseField>
     <ResponseField name="fee_source" type="string">
       `balance` or `amount`.
@@ -229,7 +206,7 @@ The batch is created and the checks have started. Nothing has been debited.
 ```json 400
 {
   "success": false,
-  "message": "payouts.1.reference: is required"
+  "message": "Every row needs a reference. Missing on rows 2, 3."
 }
 ```
 
