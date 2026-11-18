@@ -1,0 +1,249 @@
+---
+title: 'Bulk Payout'
+api: 'POST https://api.rollapay.com/payout/bulk'
+description: 'Send up to 500 bank payouts in one request, approved by the business owner'
+---
+
+## Overview
+
+Send up to 500 NGN bank payouts in one request. Nothing leaves your wallet until the business owner approves the batch.
+
+<Steps>
+  <Step title="You create the batch">
+    Send the payouts to this endpoint. You get back a batch `reference` with status `checking`.
+  </Step>
+  <Step title="We check every payout">
+    In the background we work out each payout's fee, apply your limits and look up the account name at the bank. Payouts that fail a check are left out of the batch, with the reason. Nothing is debited.
+  </Step>
+  <Step title="The owner approves">
+    The status becomes `awaiting_approval` and the business owner gets an email. They log in to the dashboard and approve the batch with their authenticator app. They have **30 minutes** after the checks finish. After that the batch expires and you create it again.
+  </Step>
+  <Step title="The payouts are sent">
+    Your wallet is debited and each payout is sent. Each one sends you a `payout.completed` or `payout.failed` [webhook](/api-reference/webhooks), with your `reference` as `merchant_reference`.
+  </Step>
+</Steps>
+
+Track the batch with [Get Bulk Payout](/api-reference/get-bulk-payout). Look up a single payout with [Verify Payout](/api-reference/verify-payout), using its `reference`.
+
+<Note>
+**Before you start**
+- Bulk payouts are switched on per business. Contact support to have them switched on.
+- NGN bank transfers only for now, and live keys only.
+- One batch per wallet can be checking or awaiting approval at a time.
+- Up to 500 payouts are sent per hour across all of a business's batches.
+</Note>
+
+## Authentication
+
+| Header | Type | Required | Description |
+|--------|------|----------|-------------|
+| `Authorization` | string | Yes | Your secret key (`sk_live_xxx`) |
+| `Content-Type` | string | Yes | `application/json` |
+
+## Body Parameters
+
+<ParamField body="currency" type="string" required>
+  The wallet to pay from. `NGN` only for now.
+</ParamField>
+
+<ParamField body="payouts" type="array" required>
+  1 to 500 payouts.
+  <Expandable title="properties">
+    <ParamField body="reference" type="string" required>
+      Your unique reference for this payout, up to 100 characters. It must not be used by any of your other payouts. You will see it as `merchant_reference` on webhooks and on Verify Payout.
+    </ParamField>
+    <ParamField body="amount" type="number" required>
+      The amount in naira, at most 2 decimal places (e.g. `5000` means ₦5,000).
+    </ParamField>
+    <ParamField body="bank_code" type="string" required>
+      The recipient's bank code from [List Banks](/api-reference/banks).
+    </ParamField>
+    <ParamField body="account_number" type="string" required>
+      The recipient's 10-digit account number.
+    </ParamField>
+    <ParamField body="account_name" type="string">
+      The name you expect on the account. If you send it and the bank's name does not match, that payout is left out of the batch. You do not need a name enquiry first: we look up every account ourselves.
+    </ParamField>
+    <ParamField body="narration" type="string">
+      A description for the transfer, up to 200 characters.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="fee_source" type="string" default="balance">
+  Who pays each payout's fee. `balance`: the fee is added on top, so the recipient gets the full `amount`. `amount`: the fee is taken out of `amount`.
+</ParamField>
+
+<ParamField body="name" type="string">
+  A label for the batch, up to 255 characters, shown on the dashboard. For example `November salaries`.
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "https://api.rollapay.com/payout/bulk" \
+  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "currency": "NGN",
+    "name": "November salaries",
+    "payouts": [
+      {
+        "reference": "salary-nov-0001",
+        "amount": 150000,
+        "bank_code": "000013",
+        "account_number": "0123456789",
+        "account_name": "JANE DOE",
+        "narration": "November salary"
+      },
+      {
+        "reference": "salary-nov-0002",
+        "amount": 120000,
+        "bank_code": "000014",
+        "account_number": "9876543210"
+      }
+    ]
+  }'
+```
+
+```javascript Node.js
+const response = await fetch('https://api.rollapay.com/payout/bulk', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer sk_live_your_secret_key',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    currency: 'NGN',
+    name: 'November salaries',
+    payouts: [
+      {
+        reference: 'salary-nov-0001',
+        amount: 150000,
+        bank_code: '000013',
+        account_number: '0123456789',
+        account_name: 'JANE DOE',
+        narration: 'November salary',
+      },
+      {
+        reference: 'salary-nov-0002',
+        amount: 120000,
+        bank_code: '000014',
+        account_number: '9876543210',
+      },
+    ],
+  }),
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.rollapay.com/payout/bulk',
+    headers={
+        'Authorization': 'Bearer sk_live_your_secret_key',
+    },
+    json={
+        'currency': 'NGN',
+        'name': 'November salaries',
+        'payouts': [
+            {
+                'reference': 'salary-nov-0001',
+                'amount': 150000,
+                'bank_code': '000013',
+                'account_number': '0123456789',
+                'account_name': 'JANE DOE',
+                'narration': 'November salary',
+            },
+            {
+                'reference': 'salary-nov-0002',
+                'amount': 120000,
+                'bank_code': '000014',
+                'account_number': '9876543210',
+            },
+        ],
+    },
+)
+
+data = response.json()
+```
+</RequestExample>
+
+## Response
+
+The batch is created and the checks have started. Nothing has been debited.
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  A summary, or the reason the request failed.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      Batch ID.
+    </ResponseField>
+    <ResponseField name="reference" type="string">
+      Batch reference. Use it with [Get Bulk Payout](/api-reference/get-bulk-payout).
+    </ResponseField>
+    <ResponseField name="currency" type="string">
+      Currency code.
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Always `checking` here.
+    </ResponseField>
+    <ResponseField name="total_payouts" type="number">
+      Number of payouts received.
+    </ResponseField>
+    <ResponseField name="fee_source" type="string">
+      `balance` or `amount`.
+    </ResponseField>
+    <ResponseField name="created_at" type="string">
+      When the batch was created (ISO 8601).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseExample>
+```json 202
+{
+  "success": true,
+  "message": "Bulk payout created. It is being checked, then waits for the owner's approval.",
+  "data": {
+    "id": "5d2b9f0e-3c1a-4b8e-a7d4-9e6f1c2b3a40",
+    "reference": "BATCH-1795001234567-K3M9QX2A",
+    "currency": "NGN",
+    "status": "checking",
+    "total_payouts": 2,
+    "fee_source": "balance",
+    "created_at": "2026-11-18T10:15:02.000Z"
+  }
+}
+```
+
+```json 400
+{
+  "success": false,
+  "message": "payouts.1.reference: is required"
+}
+```
+
+```json 403
+{
+  "success": false,
+  "message": "Bulk payouts are not switched on for your business. Contact support to request them."
+}
+```
+
+```json 409
+{
+  "success": false,
+  "message": "A NGN bulk payout is already being checked or waiting for approval. It must be approved, cancelled or left to expire (30 minutes after its checks) before another is created."
+}
+```
+</ResponseExample>

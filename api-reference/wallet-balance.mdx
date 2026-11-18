@@ -1,0 +1,107 @@
+---
+title: 'Wallet Balance'
+api: 'GET https://api.rollapay.com/wallets'
+description: 'Get the balance of your wallets'
+---
+
+## Overview
+
+Returns each of your wallets with its available balance: the money you can pay out now. A live key returns your live wallets, a test key your test wallets.
+
+Check the balance before sending a payout or a bulk payout, so you know the wallet can cover it.
+
+## Authentication
+
+| Header | Type | Required | Description |
+|--------|------|----------|-------------|
+| `Authorization` | string | Yes | Your secret key (`sk_live_xxx`) |
+
+## Query Parameters
+
+<ParamField query="currency" type="string">
+  Return only the wallet in this currency, e.g. `NGN`. Leave it out to get every wallet.
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.rollapay.com/wallets?currency=NGN" \
+  -H "Authorization: Bearer sk_live_your_secret_key"
+```
+
+```javascript Node.js
+const response = await fetch('https://api.rollapay.com/wallets?currency=NGN', {
+  headers: {
+    'Authorization': 'Bearer sk_live_your_secret_key',
+  },
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://api.rollapay.com/wallets',
+    params={'currency': 'NGN'},
+    headers={
+        'Authorization': 'Bearer sk_live_your_secret_key',
+    }
+)
+
+data = response.json()
+```
+</RequestExample>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  `Wallets retrieved`, or the reason the request failed.
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  One entry per wallet. Empty if you have no wallet in the currency asked for.
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      Wallet ID.
+    </ResponseField>
+    <ResponseField name="currency" type="string">
+      Currency code.
+    </ResponseField>
+    <ResponseField name="available_balance" type="number">
+      The amount you can pay out now, in major units (e.g. `250000.5` means ₦250,000.50).
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      `active`, `frozen` or `closed`. Only an `active` wallet can be paid out from.
+    </ResponseField>
+    <ResponseField name="mode" type="string">
+      `live` or `test`, matching your key.
+    </ResponseField>
+    <ResponseField name="updated_at" type="string">
+      When the wallet last changed (ISO 8601).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseExample>
+```json 200
+{
+  "success": true,
+  "message": "Wallets retrieved",
+  "data": [
+    {
+      "id": "0b6f2c1e-6a43-4f7e-9c1a-2f8d5e7b9a10",
+      "currency": "NGN",
+      "available_balance": 250000.5,
+      "status": "active",
+      "mode": "live",
+      "updated_at": "2026-11-18T09:41:12.000Z"
+    }
+  ]
+}
+```
+</ResponseExample>
