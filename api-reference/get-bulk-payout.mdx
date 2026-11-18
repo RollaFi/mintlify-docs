@@ -93,7 +93,7 @@ data = response.json()
       `balance` or `amount`.
     </ResponseField>
     <ResponseField name="total_payouts" type="number">
-      Payouts received.
+      Payout rows in the file.
     </ResponseField>
     <ResponseField name="valid_payouts" type="number">
       Payouts that passed the checks. Only these are sent.
@@ -138,10 +138,10 @@ data = response.json()
       When it was cancelled.
     </ResponseField>
     <ResponseField name="payouts" type="array">
-      Every payout in the batch, in the order you sent them.
+      Every payout in the batch, in file order.
       <Expandable title="properties">
         <ResponseField name="row" type="number">
-          Position in your request, from 1.
+          Row in your file, counting from the first row after the column names.
         </ResponseField>
         <ResponseField name="reference" type="string">
           Your reference.
