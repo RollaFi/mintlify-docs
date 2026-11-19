@@ -77,6 +77,7 @@
                 "pages": [
                   "api-reference/test-cards",
                   "api-reference/test-mobile-money",
+                  "api-reference/test-bank-transfers",
                   "api-reference/test-payouts"
                 ]
               },

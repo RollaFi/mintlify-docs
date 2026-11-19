@@ -1,0 +1,139 @@
+---
+title: 'Test Bank Transfers'
+description: 'Simulate bank transfer payments and virtual account credits with test API keys'
+---
+
+## Overview
+
+NGN bank transfer payments made with a test secret key (`sk_test_*`) are simulated. Your request goes through the same validation and fee calculation as a live payment, and you get a test account number in the same shape as a live one, plus the same status updates, webhooks and callback. No real account is opened, and no money can be sent to a test account.
+
+You can complete a test payment two ways:
+
+- **Automatically.** The simulated customer pays a test checkout account about 30 seconds after you create it. The amount you charge decides what they send (see [Test amounts](#test-amounts)).
+- **On demand.** Call [Simulate a transfer](#simulate-a-transfer) to send any amount into a test account, whenever you choose. This also works for [static virtual accounts](/api-reference/virtual-accounts) opened with a test key.
+
+## Test amounts
+
+The kobo of `amount` decide what the simulated customer sends into a checkout account. Any other amount is paid in full.
+
+| Amount ends in | What the customer sends | Outcome |
+|---|---|---|
+| `.01` (e.g. `5000.01`) | Half the amount owed | Fails after about 30 seconds |
+| `.02` (e.g. `5000.02`) | ₦1,000 more than the amount owed | Succeeds after about 30 seconds |
+| `.03` (e.g. `5000.03`) | Nothing | Fails when the account expires, 30 minutes after it was created |
+| Anything else | The exact amount owed | Succeeds after about 30 seconds |
+
+A test payment that is short fails with the reason `Insufficient amount: expected 5000.01, received 2500.01`, as a live one does. An overpayment succeeds for the amount owed.
+
+<Note>
+  Use `.03` when you want to send the transfer yourself with [Simulate a transfer](#simulate-a-transfer): the account then waits for you instead of paying itself.
+</Note>
+
+## Example
+
+This payment gets a test checkout account and is paid in full about 30 seconds later:
+
+```bash cURL
+curl -X POST "https://api.rollapay.com/transaction/initiate" \
+  -H "Authorization: Bearer sk_test_your_test_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reference": "test-transfer-001",
+    "amount": 5000,
+    "currency": "NGN",
+    "channel": "bank_transfer",
+    "customer": {
+      "email": "customer@example.com",
+      "name": "Test Customer"
+    }
+  }'
+```
+
+`POST /transaction/initiate` returns the account to show your customer, as in live:
+
+```json
+{
+  "success": true,
+  "message": "Virtual account created successfully",
+  "data": {
+    "reference": "test-transfer-001",
+    "status": "pending",
+    "account_number": "5612345678",
+    "bank_name": "NET Microfinance Bank",
+    "account_name": "Your Business - Test Customer",
+    "account_type": "dynamic",
+    "amount": 5000,
+    "expires_at": "2026-11-19T15:00:00.000Z"
+  }
+}
+```
+
+The payment reaches `successful` or `failed` afterwards, not in that response, because a real customer takes time to make the transfer. Build against the webhook or [Verify Transaction](/api-reference/verify-transaction), not against the response to `initiate`.
+
+## Simulate a transfer
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer sk_test_...`. Live keys are refused.
+</ParamField>
+
+<ParamField body="account_number" type="string" required>
+  The test account to pay into: the `account_number` from a test bank transfer payment, or from a test [static virtual account](/api-reference/virtual-accounts).
+</ParamField>
+
+<ParamField body="amount" type="number" required>
+  The amount the customer sends, in naira, with up to two decimal places.
+</ParamField>
+
+```bash cURL
+curl -X POST "https://api.rollapay.com/sandbox/bank-transfer" \
+  -H "Authorization: Bearer sk_test_your_test_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_number": "5612345678",
+    "amount": 5000
+  }'
+```
+
+```json 200 Transfer received
+{
+  "success": true,
+  "message": "Simulated transfer sent",
+  "data": {
+    "account_number": "5612345678",
+    "account_type": "dynamic",
+    "amount": 5000,
+    "reference": "test-transfer-001",
+    "status": "successful"
+  }
+}
+```
+
+What the transfer does depends on the account:
+
+- **Checkout account** (`account_type: "dynamic"`): settles the payment straight away. The amount owed or more makes it `successful`; less makes it `failed`. `reference` is the payment's reference.
+- **Static virtual account** (`account_type: "static"`): records a new successful payment for the amount sent, as a real transfer into the account would. `reference` is the new payment's reference.
+
+| Status | When |
+|---|---|
+| `400` | `account_number` is not 10 digits, or `amount` is not a positive amount with up to two decimal places |
+| `403` | The key is a live key |
+| `404` | No test account with that number belongs to your business |
+| `409` | The checkout account has expired, its payment is already final, or the static account is deactivated |
+
+## Webhooks
+
+`payment.success` and `payment.failed` fire for test payments, delivered to your **test** webhook URL and signed with your **test** webhook secret. If you sent a `callbackUrl`, it is notified as well. A test payment whose account expires unpaid fails, and you are notified as you would be in live.
+
+## How it differs from live
+
+- **Accounts.** Test account numbers are not real and cannot receive money from a bank. Checkout accounts start with `56` and static accounts with `55`.
+- **Sender.** The payer on a test transfer is always `Sandbox Customer` at `Sandbox Bank`.
+- **Limits.** Processor minimums are not applied.
+
+Your own account rules still apply: bank transfer must not be switched off for NGN on your account, your amount limits apply, and fees are calculated as in live.
+
+## Separation from live
+
+- Test payments do not settle. Nothing is credited to a wallet, including your sandbox wallet. To fund a sandbox wallet, see [Test Payouts](/api-reference/test-payouts#funding-your-sandbox-wallet).
+- A test key always simulates NGN bank transfers. No test payment reaches a bank.
+- Test amounts mean nothing in live. A live payment of `5000.01` is a normal payment of ₦5,000.01.
