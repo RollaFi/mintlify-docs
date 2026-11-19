@@ -47,7 +47,7 @@ Use `sk_test_*` keys for testing and `sk_live_*` keys for production.
 </Note>
 
 <Tip>
-If Rolla has whitelisted IP addresses for your account, live payouts are only accepted from those addresses. See [IP Whitelisting](/authentication#ip-whitelisting).
+If Rolla has whitelisted IP addresses for your account, live payouts are only accepted from those addresses. See [IP Whitelisting](/ip-whitelisting).
 </Tip>
 
 ## Payout Statuses
@@ -132,5 +132,5 @@ Always verify the webhook signature using your webhook secret before updating an
 | 400 | Wallet currency not found | No wallet exists for the specified currency. |
 | 400 | Duplicate payout reference | A payout with this `reference` already exists. |
 | 401 | Authentication required | Missing or invalid secret key. |
-| 403 | `Requests from <ip> are not allowed for this live secret key` | The call came from an address that isn't on your IP whitelist. See [IP Whitelisting](/authentication#ip-whitelisting). |
+| 403 | `Requests from <ip> are not allowed for this live secret key` | The call came from an address that isn't on your IP whitelist. See [IP Whitelisting](/ip-whitelisting). |
 | 429 | Too many payout attempts | Rate limit exceeded (max 5 per hour per wallet). |
