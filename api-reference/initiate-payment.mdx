@@ -123,8 +123,8 @@ These parameters are shared across all payment channels.
   </Expandable>
 </ParamField>
 
-<ParamField body="callbackUrl" type="string" required>
-  URL to redirect the customer after payment completion. Query parameters `reference` and `status` (successful/failed) will be appended.
+<ParamField body="callbackUrl" type="string">
+  **Required for every channel except `bank_transfer`.** URL to redirect the customer after payment completion. Query parameters `reference` and `status` (successful/failed) will be appended.
 </ParamField>
 
 <ParamField body="description" type="string">

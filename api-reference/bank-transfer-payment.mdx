@@ -63,8 +63,8 @@ Authorization: Bearer sk_live_your_secret_key
   </Expandable>
 </ParamField>
 
-<ParamField body="callbackUrl" type="string" required>
-  URL to redirect the customer after payment completion. Query parameters `reference` and `status` (successful/failed) will be appended.
+<ParamField body="callbackUrl" type="string">
+  Optional for bank transfers. URL to redirect the customer after payment completion. Query parameters `reference` and `status` (successful/failed) will be appended.
 </ParamField>
 
 <ParamField body="description" type="string">
@@ -120,6 +120,7 @@ curl -X POST "https://api.rollapay.com/transaction/initiate" \
   -H "Authorization: Bearer sk_live_your_secret_key" \
   -H "Content-Type: application/json" \
   -d '{
+    "reference": "ORD-456",
     "amount": 5000,
     "currency": "NGN",
     "channel": "bank_transfer",
@@ -143,6 +144,7 @@ const response = await fetch('https://api.rollapay.com/transaction/initiate', {
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
+    reference: 'ORD-456',
     amount: 5000,
     currency: 'NGN',
     channel: 'bank_transfer',
@@ -171,6 +173,7 @@ response = requests.post(
         'Content-Type': 'application/json',
     },
     json={
+        'reference': 'ORD-456',
         'amount': 5000,
         'currency': 'NGN',
         'channel': 'bank_transfer',
@@ -195,6 +198,7 @@ data = response.json()
 $url = 'https://api.rollapay.com/transaction/initiate';
 
 $data = [
+    'reference' => 'ORD-456',
     'amount' => 5000,
     'currency' => 'NGN',
     'channel' => 'bank_transfer',
@@ -231,7 +235,7 @@ $result = json_decode($response, true);
   "success": true,
   "message": "Virtual account created successfully",
   "data": {
-    "reference": "TXN_d7WblCDVuoqiQAMB",
+    "reference": "ORD-456",
     "status": "pending",
     "account_number": "9002389673",
     "bank_name": "NET Microfinance Bank",
