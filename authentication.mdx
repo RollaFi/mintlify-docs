@@ -110,6 +110,36 @@ Common authentication errors:
 | `API key required`   | No Authorization header was provided         |
 | `API key not active` | The API key has been disabled                |
 
+## IP Whitelisting
+
+You can lock your live secret key to your own servers. Rolla then refuses any call made with that key from another address, so a leaked key can't be used to take payments or make payouts.
+
+- Applies to live secret keys (`sk_live_*`) only. Test keys and public keys work from any address.
+- Covers every call made with the key: payments, refunds, payment links, virtual accounts and payouts.
+- Off until you ask for it. With no addresses registered, any address can use your key.
+
+### Turning It On
+
+Send Rolla support the public IP addresses your servers call our API from. Once they're added, you can see them in the [Rolla Dashboard](https://merchant.rollapay.com) under **Settings > API Keys & Webhooks**, on the **Live** tab.
+
+<Note>
+  Send the address your server's outgoing traffic leaves from, and make sure it's fixed. On a cloud provider, use a static address such as an AWS Elastic IP or a NAT gateway; an address that changes on restart will be refused. If your servers connect over IPv6, send that address too. You can send a range in CIDR form, for example `203.0.113.0/24`.
+</Note>
+
+### Refused Calls
+
+A call from an address that isn't registered gets a `403 Forbidden` response:
+
+```json
+{
+  "success": false,
+  "status": 403,
+  "message": "Requests from 203.0.113.7 are not allowed for this live secret key. Contact Rolla support to add this IP address."
+}
+```
+
+The message shows the address we saw, which is the one to register.
+
 ### Best Practices
 
 <AccordionGroup>
@@ -128,7 +158,7 @@ Common authentication errors:
   <Accordion title="Use test keys for development">
     Always use test API keys (`sk_test_*`) during development to avoid processing real transactions.
   </Accordion>
-  <Accordion title="Restrict key permissions">
-    Use the dashboard to configure which operations each key can perform.
+  <Accordion title="Whitelist your server IPs">
+    Ask Rolla support to lock your live secret key to your servers' IP addresses. See [IP Whitelisting](#ip-whitelisting).
   </Accordion>
 </AccordionGroup>

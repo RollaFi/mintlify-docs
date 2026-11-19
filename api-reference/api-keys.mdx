@@ -45,6 +45,12 @@ If a key is compromised:
   fail.
 </Warning>
 
+## IP Whitelisting
+
+You can lock your live secret key to your own servers. Send Rolla support the public IP addresses you call the API from; calls made with the key from any other address are then refused with a `403`. Test keys and public keys work from any address.
+
+Your whitelisted addresses are shown in the dashboard under **Settings > API Keys & Webhooks**, on the **Live** tab. See [IP Whitelisting](/authentication#ip-whitelisting) for details.
+
 ## Security Best Practices
 
 <CardGroup cols={2}>
