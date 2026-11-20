@@ -108,10 +108,10 @@ data = response.json()
       Sum of their fees.
     </ResponseField>
     <ResponseField name="total_vat" type="number">
-      VAT on those fees.
+      VAT on those fees. Present only when above 0.
     </ResponseField>
     <ResponseField name="total_stamp_duty" type="number">
-      Stamp duty, where it applies.
+      Stamp duty. Present only when above 0.
     </ResponseField>
     <ResponseField name="total_debit" type="number">
       What leaves your wallet when the batch is approved.
@@ -158,11 +158,11 @@ data = response.json()
         <ResponseField name="fee" type="number | null">
           Fee.
         </ResponseField>
-        <ResponseField name="vat_amount" type="number | null">
-          VAT on the fee.
+        <ResponseField name="vat_amount" type="number">
+          VAT on the fee. Present only when above 0.
         </ResponseField>
-        <ResponseField name="stamp_duty" type="number | null">
-          Stamp duty.
+        <ResponseField name="stamp_duty" type="number">
+          Stamp duty. Present only when above 0.
         </ResponseField>
         <ResponseField name="net_amount" type="number | null">
           What the recipient receives.
@@ -254,8 +254,6 @@ data = response.json()
         "error": "account_number must be 10 digits for NGN bank payouts",
         "amount": null,
         "fee": null,
-        "vat_amount": null,
-        "stamp_duty": null,
         "net_amount": null,
         "total_debit": null,
         "bank_code": "000014",
