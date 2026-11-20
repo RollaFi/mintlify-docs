@@ -75,14 +75,16 @@ All webhooks are sent as `POST` requests with a JSON body.
     "status": "successful",
     "amount": 5000,
     "currency": "NGN",
+    "feeAmount": 20,
+    "netAmount": 4980,
     "channel": "bank_transfer",
     "customerEmail": "customer@example.com",
     "payment_source": {
       "type": "bank_transfer",
       "account_number": "9002389673",
       "bank_name": "NET Microfinance Bank",
-      "sender_name": "AMOS ORUAROGHENE",
-      "sender_account_number": "0107629596",
+      "sender_name": "JOHN DOE",
+      "sender_account_number": "0123456789",
       "sender_bank": "GTBank Plc"
     }
   }
