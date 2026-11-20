@@ -315,12 +315,22 @@ $result = json_decode($response, true);
 }
 ```
 
-```json 503 Wallet Not Available
+```json 400 Wallet Not Available
 {
   "success": false,
-  "status": 503,
+  "status": 400,
   "message": "Mixx by Yas is not available right now. Please try another payment method.",
-  "code": "PROCESSOR_UNAVAILABLE"
+  "code": "PAYMENT_METHOD_UNAVAILABLE"
+}
+```
+
+```json 400 Declined
+{
+  "success": false,
+  "status": 400,
+  "code": "PAYMENT_DECLINED",
+  "message": "The customer's balance is too low.",
+  "failure_reason": "insufficient_funds"
 }
 ```
 
@@ -357,6 +367,8 @@ $result = json_decode($response, true);
 ```json 409 Duplicate Reference
 {
   "success": false,
+  "status": 409,
+  "code": "DUPLICATE_REFERENCE",
   "message": "Transaction with reference 'ORD-78901' already exists"
 }
 ```

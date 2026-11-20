@@ -155,7 +155,7 @@ A transfer into a [virtual account](/api-reference/virtual-accounts#webhook) als
       Custom metadata attached to the transaction
     </ResponseField>
     <ResponseField name="failureReason" type="string">
-      Reason for failure (if failed)
+      Why the payment failed, from the [failure reasons](/api-reference/errors#failure-reasons) (null if not failed)
     </ResponseField>
     <ResponseField name="completedAt" type="string">
       ISO 8601 timestamp when completed (if successful)

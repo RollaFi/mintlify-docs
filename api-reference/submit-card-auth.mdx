@@ -60,7 +60,7 @@ Use the key for the same mode as the payment: a `sk_test_*` key cannot complete 
       Where to send the customer when `auth_mode` is `3ds`.
     </ResponseField>
     <ResponseField name="failure_reason" type="string | null">
-      Why the payment was refused, when `status` is `failed`.
+      Why the payment was refused, from the [failure reasons](/api-reference/errors#failure-reasons), when `status` is `failed`.
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -112,7 +112,7 @@ curl -X POST "https://api.rollapay.com/transaction/ORD-12345/otp" \
   "data": {
     "reference": "ORD-12345",
     "status": "failed",
-    "failure_reason": "Invalid pin provided."
+    "failure_reason": "authentication_failed"
   }
 }
 ```

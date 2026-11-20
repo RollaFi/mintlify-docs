@@ -13,10 +13,10 @@ Every transaction includes a `response_code` and `response_message` that indicat
 {
   "reference": "TXN_abc123",
   "status": "failed",
-  "gateway_response": "DECLINED",
+  "gateway_response": "insufficient_funds",
   "response_code": "60",
   "response_message": "Insufficient funds",
-  "failure_reason": "DECLINED"
+  "failure_reason": "insufficient_funds"
 }
 ```
 
@@ -24,8 +24,10 @@ Every transaction includes a `response_code` and `response_message` that indicat
 |-------|-------------|
 | `response_code` | Rolla's internal 2-digit code (see tables below) |
 | `response_message` | Human-readable description of the code |
-| `gateway_response` | Raw response from the payment processor |
-| `failure_reason` | Raw processor decline reason (same as `gateway_response` for failed transactions) |
+| `gateway_response` | `APPROVED` when successful; the same value as `failure_reason` when failed |
+| `failure_reason` | Why the payment failed, from the [failure reasons](/api-reference/errors#failure-reasons) |
+
+For error responses to API requests and which ones are final, see [Errors](/api-reference/errors).
 
 ---
 
@@ -164,7 +166,7 @@ Request or data format errors.
     Use the `response_message` field when displaying errors to customers. It provides a clear, non-technical explanation.
   </Card>
   <Card title="Logging" icon="clipboard-list">
-    Log `response_code`, `response_message`, and `gateway_response` together for debugging and support.
+    Log `response_code`, `response_message`, and `failure_reason` together for debugging and support.
   </Card>
 </CardGroup>
 
@@ -203,5 +205,5 @@ async function handlePaymentResponse(response) {
 <Note>
   The `response_code` is Rolla's normalized code, consistent across all processors and payment channels.
   Bank transfer transactions use the same response codes as card payments — `00` for success, `60` for insufficient funds, etc.
-  The `gateway_response` contains the raw processor response for advanced debugging.
+  `failure_reason` is always one of our [failure reasons](/api-reference/errors#failure-reasons), whichever processor handled the payment.
 </Note>

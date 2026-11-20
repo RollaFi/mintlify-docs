@@ -1,0 +1,120 @@
+---
+title: 'Errors'
+description: 'Error codes, which ones are final, and why a payment failed'
+---
+
+When a payment cannot go ahead, the API answers with an error. This page lists every error code a payment can return, says which ones are final, and lists the values of `failure_reason`.
+
+## The rule
+
+<Note>
+  **An error response to a payment request is final.** The payment failed, or was never created, and the customer will not be charged for it later. You can mark it failed.
+</Note>
+
+The exceptions:
+
+- **`409 DUPLICATE_REFERENCE`** says nothing about this attempt. A payment with that reference already exists. Check its status with [Verify Transaction](/api-reference/verify-transaction) instead of marking anything failed.
+- **`PAYMENT_TIMEOUT` and `PAYMENT_FAILED`** mean we could not confirm the outcome with the payment provider. Check the status after 2 minutes.
+- **Any `5xx` response, or no response at all,** means the outcome is not known. Wait for the webhook, or check the status after 2 minutes.
+
+When a payment is still in progress (for example, a mobile money prompt waiting for the customer), the response is `200` with `status: "processing"`, not an error. The final outcome arrives by [webhook](/api-reference/webhooks) or [Verify Transaction](/api-reference/verify-transaction).
+
+## Error format
+
+```json
+{
+  "success": false,
+  "status": 400,
+  "code": "PAYMENT_DECLINED",
+  "message": "The customer's balance is too low.",
+  "failure_reason": "insufficient_funds"
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `code` | What went wrong. Build your logic on this, not on `message`. |
+| `message` | A sentence you can show the customer. Wording may change. |
+| `failure_reason` | Only on `PAYMENT_DECLINED`: why the payment was refused. See [Failure reasons](#failure-reasons). |
+
+## Error codes
+
+### Rejected before a payment was created
+
+Nothing was charged. Fix the request before sending it again.
+
+| Code | Status | Final | Meaning | What to do |
+|------|--------|-------|---------|------------|
+| `VALIDATION_ERROR` | 400 | Yes | A field is missing or invalid, such as a phone number with the wrong number of digits. `message` names the field. | Fix the request |
+| `CURRENCY_NOT_SUPPORTED` | 400 | Yes | The currency is not enabled on your account. | Use an enabled currency |
+| `CHANNEL_NOT_ENABLED` | 400 | Yes | The payment channel is not enabled for this currency. | Use an enabled channel |
+| `AMOUNT_BELOW_MINIMUM` | 400 | Yes | The amount is below the minimum. `message` gives the minimum. | Raise the amount |
+| `AMOUNT_EXCEEDS_LIMIT` | 400 | Yes | The amount is above the maximum, or your daily limit is reached. | Lower the amount, or try again tomorrow |
+| `CARD_LIMIT_EXCEEDED` | 400 | Yes | This card has been used too many times today. | Use another card |
+| `TRANSACTION_REJECTED` | 400 | Yes | Blocked by our risk checks or a rule on your account. | Do not retry as-is |
+| `PAYMENT_METHOD_UNAVAILABLE` | 400 | Yes | This payment method is not available right now. | Offer the customer another method |
+| `DUPLICATE_REFERENCE` | 409 | **No** | A payment with this reference already exists. | Check that reference's status; do not mark it failed |
+
+### Refused after the payment was created
+
+The payment exists with `status: "failed"`. Nothing was charged. The customer can try again.
+
+| Code | Status | Final | Meaning |
+|------|--------|-------|---------|
+| `PAYMENT_DECLINED` | 400 | Yes | The customer's wallet or bank refused the payment. `failure_reason` says why. |
+| `INSUFFICIENT_FUNDS` | 400 | Yes | Card declined: not enough funds. |
+| `INVALID_CARD` | 400 | Yes | Card declined: the card details are invalid. |
+| `CARD_EXPIRED` | 400 | Yes | Card declined: the card has expired. |
+| `CARD_NOT_SUPPORTED` | 400 | Yes | Card declined: this card type is not accepted. |
+| `THREE_DS_FAILED` | 400 | Yes | Card declined: 3D Secure verification failed. |
+
+### Outcome not known
+
+| Code | Status | Final | What to do |
+|------|--------|-------|------------|
+| `PAYMENT_TIMEOUT`, `PAYMENT_FAILED` | 400 | **No** | Check the status after 2 minutes |
+| `INTERNAL_ERROR`, `SERVICE_UNAVAILABLE`, or no response | 5xx | **No** | Check the status after 2 minutes |
+
+## Checking a payment's status
+
+[Verify Transaction](/api-reference/verify-transaction) returns the payment with its `status`:
+
+| Status | Final |
+|--------|-------|
+| `successful` | Yes |
+| `failed` | Yes. `failure_reason` says why. |
+| `pending`, `processing`, `requires_action` | No. Wait for the webhook or check again later. |
+
+If we have no payment with that reference on your account, the response is `404` with code `TRANSACTION_NOT_FOUND`. No payment was created under that reference and nothing was charged. If your payment request was sent more than 2 minutes earlier, you can mark it failed.
+
+```json
+{
+  "success": false,
+  "status": 404,
+  "code": "TRANSACTION_NOT_FOUND",
+  "message": "Transaction not found"
+}
+```
+
+## Failure reasons
+
+`failure_reason` is set on every failed payment: in Verify Transaction, in the `PAYMENT_DECLINED` error, and as `failureReason` in webhooks. It is always one of these values.
+
+| Value | Meaning |
+|-------|---------|
+| `insufficient_funds` | The customer's balance is too low. |
+| `limit_reached` | The customer's account limit was reached. |
+| `account_not_found` | No account was found for this number. |
+| `account_inactive` | The customer's account is not active. |
+| `not_approved_in_time` | The customer did not approve the payment in time. |
+| `cancelled_by_customer` | The customer cancelled the payment. |
+| `authentication_failed` | The customer did not complete card or PIN verification. |
+| `invalid_card` | The card details are invalid. |
+| `card_expired` | The card has expired. |
+| `invalid_details` | The payment details were invalid. |
+| `operator_unavailable` | The mobile money operator or bank could not process the payment. Try again later. |
+| `declined` | The payment was declined, with no more specific reason. |
+
+<Note>
+  New values may be added. Treat an unknown value as `declined`.
+</Note>

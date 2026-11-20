@@ -266,6 +266,8 @@ $paymentUrl = $result['data']['payment_url'];
 ```json 409 Duplicate Reference
 {
   "success": false,
+  "status": 409,
+  "code": "DUPLICATE_REFERENCE",
   "message": "Transaction with reference 'ORD-78901' already exists"
 }
 ```

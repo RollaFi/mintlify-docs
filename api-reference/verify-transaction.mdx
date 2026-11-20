@@ -186,7 +186,7 @@ Authorization: Bearer sk_live_your_secret_key
       Custom metadata attached to the transaction
     </ResponseField>
     <ResponseField name="gateway_response" type="string">
-      Response message from the payment gateway
+      `APPROVED` when successful; the same value as `failure_reason` when failed
     </ResponseField>
     <ResponseField name="created_at" type="string">
       ISO 8601 timestamp when the transaction was created
@@ -198,7 +198,7 @@ Authorization: Bearer sk_live_your_secret_key
       ISO 8601 timestamp when transaction failed (null if not failed)
     </ResponseField>
     <ResponseField name="failure_reason" type="string">
-      Reason for failure (null if not failed)
+      Why the payment failed, from the [failure reasons](/api-reference/errors#failure-reasons) (null if not failed)
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -443,19 +443,20 @@ if ($result['success'] && $result['data']['status'] === 'successful') {
     },
     "description": "Payment for Premium Plan",
     "metadata": {},
-    "gateway_response": "Insufficient funds",
+    "gateway_response": "insufficient_funds",
     "created_at": "2026-02-28T16:00:00.000Z",
     "paid_at": null,
     "failed_at": "2026-02-28T16:00:15.000Z",
-    "failure_reason": "Insufficient funds"
+    "failure_reason": "insufficient_funds"
   }
 }
 ```
 
-```json 400 Transaction Not Found
+```json 404 Transaction Not Found
 {
   "success": false,
-  "status": 400,
+  "status": 404,
+  "code": "TRANSACTION_NOT_FOUND",
   "message": "Transaction not found"
 }
 ```

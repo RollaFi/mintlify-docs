@@ -264,6 +264,8 @@ $result = json_decode($response, true);
 ```json 409 Duplicate Reference
 {
   "success": false,
+  "status": 409,
+  "code": "DUPLICATE_REFERENCE",
   "message": "Transaction with reference 'ORD-456' already exists"
 }
 ```

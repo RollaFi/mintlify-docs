@@ -152,7 +152,7 @@ Authorization: Bearer sk_live_your_secret_key
       Where to send the customer to complete 3D Secure. Present when `auth_mode` is `3ds`.
     </ResponseField>
     <ResponseField name="failure_reason" type="string | null">
-      Why the payment was refused. Present when `status` is `failed`.
+      Why the payment was refused, from the [failure reasons](/api-reference/errors#failure-reasons). Present when `status` is `failed`.
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -373,7 +373,7 @@ $result = json_decode($response, true);
   "data": {
     "reference": "ORD-12345",
     "status": "failed",
-    "failure_reason": "Minimum amount is 100 Naira"
+    "failure_reason": "insufficient_funds"
   }
 }
 ```
@@ -413,6 +413,8 @@ $result = json_decode($response, true);
 ```json 409 Duplicate Reference
 {
   "success": false,
+  "status": 409,
+  "code": "DUPLICATE_REFERENCE",
   "message": "Transaction with reference 'ORD-12345' already exists"
 }
 ```
@@ -460,4 +462,4 @@ The transaction completed immediately without additional authentication.
 4. Use the [Verify Transaction](/api-reference/verify-transaction) endpoint to confirm the final status
 
 ### `status` is `failed`
-The payment was refused. `failure_reason` says why.
+The payment was refused. `failure_reason` says why; see [Errors](/api-reference/errors#failure-reasons).
