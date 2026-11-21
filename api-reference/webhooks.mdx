@@ -13,6 +13,8 @@ Configure your webhook URL in the [Rolla Dashboard](https://merchant.rollapay.co
 
 You can configure separate webhook URLs for test and live modes.
 
+The same page shows your **signing key** (also called the webhook secret), which you use to [verify webhooks](#verifying-webhooks). Test and live have different signing keys, so use the one that matches the mode.
+
 ## Webhook Events
 
 | Event                | Description                               |
@@ -178,49 +180,60 @@ Each webhook request includes the following headers:
 | Header               | Description                                  |
 | -------------------- | -------------------------------------------- |
 | `Content-Type`       | Always `application/json`                    |
-| `X-RollaPay-Signature`  | HMAC-SHA256 signature for verification       |
+| `X-RollaPay-Signature`  | HMAC-SHA256 signature of the request body, in hex |
 | `X-RollaPay-Event`      | The event type (e.g., `payment.success`)     |
 | `X-RollaPay-Timestamp`  | ISO 8601 timestamp when the webhook was sent |
-| `X-RollaPay-Webhook-Id` | Unique webhook delivery ID                   |
+| `X-RollaPay-Webhook-Id` | Unique webhook ID, the same on every retry   |
+| `X-RollaPay-Retry-Attempt` | Retry number. Only sent on retries        |
 
 ## Verifying Webhooks
 
 <Warning>
-  Always verify webhook signatures to ensure requests are from Rolla.
+  Always verify the signature before acting on a webhook. It is the only way to know the request came from Rolla: anyone who finds your webhook URL can send it a request. We do not publish fixed IP addresses for webhooks, so don't rely on IP whitelisting.
 </Warning>
 
-Verify the signature using your webhook secret:
+To verify a webhook:
+
+1. Read the **raw request body**, exactly as it arrived, before any JSON parsing. Re-encoding the parsed JSON changes the bytes and the signature won't match.
+2. Compute an HMAC-SHA256 of the raw body, using your signing key as the key, and hex-encode it.
+3. Compare it with the `X-RollaPay-Signature` header using a constant-time comparison. If they differ, or the header is missing, reject the request with `401`.
+4. Check the `timestamp` field in the body. It's covered by the signature, so it can't be altered; reject webhooks more than 5 minutes old to stop old requests being replayed. Every retry is re-signed with a fresh timestamp.
+5. Use `webhookId` to skip webhooks you've already processed.
 
 ```javascript Node.js
 const crypto = require('crypto');
+const express = require('express');
+
+const app = express();
 
 function verifyWebhook(rawBody, signature, secret) {
-  const expectedSignature = crypto
+  if (typeof signature !== 'string') return false;
+
+  const expected = crypto
     .createHmac('sha256', secret)
-    .update(rawBody) // Use raw request body, NOT JSON.stringify(parsedBody)
+    .update(rawBody) // the raw bytes, NOT JSON.stringify(req.body)
     .digest('hex');
 
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature)
-  );
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  // timingSafeEqual throws if the lengths differ
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-// Express.js example
-// IMPORTANT: Capture the raw body before JSON parsing
-app.post('/webhook', express.json({
-  verify: (req, res, buf) => {
-    req.rawBody = buf.toString('utf-8');
-  }
-}), (req, res) => {
+// express.raw keeps the body as a Buffer so it can be verified
+app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
   const signature = req.headers['x-rollapay-signature'];
-  const webhookSecret = process.env.ROLLA_WEBHOOK_SECRET;
 
-  if (!verifyWebhook(req.rawBody, signature, webhookSecret)) {
+  if (!verifyWebhook(req.body, signature, process.env.ROLLA_WEBHOOK_SECRET)) {
     return res.status(401).send('Invalid signature');
   }
 
-  const { event, data } = req.body;
+  const { event, timestamp, webhookId, data } = JSON.parse(req.body);
+
+  if (Date.now() - new Date(timestamp).getTime() > 5 * 60 * 1000) {
+    return res.status(400).send('Webhook too old');
+  }
+  // Skip it if webhookId has already been processed
 
   switch (event) {
     case 'payment.success':
@@ -238,30 +251,37 @@ app.post('/webhook', express.json({
 ```
 
 ```python Python
-import hmac
 import hashlib
+import hmac
+import json
+import os
+from datetime import datetime, timezone
+
+from flask import Flask, request
+
+app = Flask(__name__)
 
 def verify_webhook(raw_body, signature, secret):
-    # Use raw request body, NOT json.dumps(parsed_body)
-    expected_signature = hmac.new(
-        secret.encode('utf-8'),
-        raw_body,
-        hashlib.sha256
-    ).hexdigest()
+    if not signature:
+        return False
+    # raw_body is the raw bytes, NOT json.dumps(parsed_body)
+    expected = hmac.new(secret.encode('utf-8'), raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(signature, expected)
 
-    return hmac.compare_digest(signature, expected_signature)
-
-# Flask example
 @app.route('/webhook', methods=['POST'])
 def webhook():
     signature = request.headers.get('X-RollaPay-Signature')
-    webhook_secret = os.environ.get('ROLLA_WEBHOOK_SECRET')
 
-    # IMPORTANT: Use request.data (raw bytes) for signature verification
-    if not verify_webhook(request.data, signature, webhook_secret):
+    # request.get_data() returns the raw bytes
+    if not verify_webhook(request.get_data(), signature, os.environ['ROLLA_WEBHOOK_SECRET']):
         return 'Invalid signature', 401
 
-    payload = request.json
+    payload = json.loads(request.get_data())
+    sent_at = datetime.fromisoformat(payload['timestamp'].replace('Z', '+00:00'))
+    if (datetime.now(timezone.utc) - sent_at).total_seconds() > 300:
+        return 'Webhook too old', 400
+    # Skip it if payload['webhookId'] has already been processed
+
     event = payload.get('event')
     data = payload.get('data')
 
@@ -273,6 +293,33 @@ def webhook():
         print(f"Payment failed: {data['reference']}")
 
     return 'OK', 200
+```
+
+```php PHP
+<?php
+$rawBody   = file_get_contents('php://input'); // the raw bytes, before json_decode
+$signature = $_SERVER['HTTP_X_ROLLAPAY_SIGNATURE'] ?? '';
+$secret    = getenv('ROLLA_WEBHOOK_SECRET');
+
+$expected = hash_hmac('sha256', $rawBody, $secret);
+if (!hash_equals($expected, $signature)) {
+    http_response_code(401);
+    exit('Invalid signature');
+}
+
+$payload = json_decode($rawBody, true);
+if (time() - strtotime($payload['timestamp']) > 300) {
+    http_response_code(400);
+    exit('Webhook too old');
+}
+// Skip it if $payload['webhookId'] has already been processed
+
+if ($payload['event'] === 'payment.success') {
+    // Handle successful payment: $payload['data']['reference']
+}
+
+http_response_code(200);
+echo 'OK';
 ```
 
 ## Responding to Webhooks
